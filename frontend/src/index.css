@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+body {
+    background: url('./assets/background-cool.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
