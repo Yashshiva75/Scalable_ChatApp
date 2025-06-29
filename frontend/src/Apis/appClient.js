@@ -4,7 +4,8 @@ import { BASE_URL,TIMEOUT,DEFAULT_HEADERS } from './config'
 const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: TIMEOUT,
-  headers: DEFAULT_HEADERS
+  headers: DEFAULT_HEADERS,
+  withCredentials: true
 })
 
 // Request interceptor

@@ -1,0 +1,11 @@
+[33mcommit 0bd70325fb6668edc4fca8491c04f6ade25f5d1b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfrontend[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/frontend[m[33m, [m[1;31morigin/dev[m[33m, [m[1;31morigin/backend[m[33m, [m[1;32mmain[m[33m, [m[1;32mdev[m[33m, [m[1;32mbackend[m[33m)[m
+Author: Yash shiva <124360143+Yashshiva75@users.noreply.github.com>
+Date:   Sun Jun 29 10:58:15 2025 +0530
+
+    Removed backend .env from version control
+
+[33mcommit f0f5a8423efbf6329665118e11e03625d2003800[m
+Author: Yash shiva <124360143+Yashshiva75@users.noreply.github.com>
+Date:   Sun Jun 29 10:54:03 2025 +0530
+
+    Initial commit

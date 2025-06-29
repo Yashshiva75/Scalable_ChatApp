@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { authApi } from "../Apis/authApis";
-import { showErrorToast } from "../Apis";
 import {useDispatch} from 'react-redux'
 import { setUser } from "../Store/userSlice";
+import { showSuccessToast,showErrorToast } from "../utils/toasts/ReactToast";
+import { useNavigate } from "react-router-dom";
 
 export default function AuthUI() {
 
   const dispatch = useDispatch()
+  const navigate = useNavigate()
 
   const [activeTab, setActiveTab] = useState("login");
   const [formData, setFormData] = useState({
@@ -30,11 +32,19 @@ export default function AuthUI() {
       const apiCall = activeTab === 'register' ? authApi.register(formData) : authApi.login(formData);
 
       const response = await apiCall;
-
+      
       console.log("response", response);
+      if(response.token){
+        navigate('/chat')
+        localStorage.setItem('token',response.token)
+        localStorage.setItem("user", JSON.stringify(response.user));
+      }
+      showSuccessToast('Logged In')
       dispatch(setUser({user:response.user,token:response.token}))
+      
     } catch (error) {
-      const errorMessage = showErrorToast(error);
+      showErrorToast("Error Logging In")
+      
       // Show error to user
     }
   };
