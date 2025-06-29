@@ -1,5 +1,5 @@
-import apiClient from './apiClient';
-import { ENDPOINTS } from './endpoints';
+import apiClient from './appClient';
+import { ENDPOINTS } from './endpoint';
 
 export const userAPI = {
   // Get user profile
@@ -13,8 +13,8 @@ export const userAPI = {
   },
 
   // Get all users
-  getAllUsers: async (page = 1, limit = 10) => {
-    return await apiClient.get(`${ENDPOINTS.USER_LIST}?page=${page}&limit=${limit}`);
+  getAllUsers: async () => {
+    return await apiClient.get(ENDPOINTS.USER_LIST);
   },
 
   // Search users

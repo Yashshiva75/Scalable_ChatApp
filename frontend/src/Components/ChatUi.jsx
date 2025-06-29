@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-
+import { useQuery } from '@tanstack/react-query';
+import { userAPI } from '../Apis/userAPI';
 export default function ChatApp() {
   const [activeUser, setActiveUser] = useState(0);
   const [newMessage, setNewMessage] = useState('');
@@ -83,6 +84,14 @@ export default function ChatApp() {
       unread: 0
     }
   ];
+
+  //Users api
+  const {data,isLoading} = useQuery({
+    queryKey:['users'],
+    queryFn:userAPI.getAllUsers,
+  })
+
+  console.log('Users')
 
   // Function to scroll to bottom
   const scrollToBottom = () => {
