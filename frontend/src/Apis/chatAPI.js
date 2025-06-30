@@ -3,8 +3,8 @@ import { ENDPOINTS } from './endpoint';
 
 export const chatAPI = {
   // Send message
-  sendMessage: async (messageData) => {
-    return await apiClient.post(ENDPOINTS.SEND_MESSAGE, messageData);
+  sendMessage: async (receiverId) => {
+    return await apiClient.post(`${ENDPOINTS.SEND_MESSAGE}/${receiverId}`);
   },
 
   // Get messages for a chat
@@ -12,6 +12,9 @@ export const chatAPI = {
     return await apiClient.get(`${ENDPOINTS.GET_MESSAGES}/${chatId}?page=${page}&limit=${limit}`);
   },
 
+  getConversation :async(id) =>{
+    return await apiClient.get(`${ENDPOINTS.GET_CONVO}/${id}`)
+  },
   // Create chat room
   createRoom: async (roomData) => {
     return await apiClient.post(ENDPOINTS.CREATE_ROOM, roomData);
