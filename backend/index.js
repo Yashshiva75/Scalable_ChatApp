@@ -1,12 +1,16 @@
 import express from 'express'
-const app = express()
 import dotenv from 'dotenv'
+import http from 'http'
 import userRoute from './routes/userRoute.js'
 import MessageRoutes from './routes/MessageRoutes.js'
 import cookieParser from 'cookie-parser';
 import cors from 'cors'
 import  {connectDb}  from './config/database.js'
+import { initSocket } from './socketServer/socketServer.js'
 dotenv.config()
+
+const app = express()
+const server = http.createServer(app); // Create server for both HTTP & socket
 
 app.use(express.json())
 app.use(cookieParser());
@@ -17,12 +21,13 @@ app.use(cors({
 }))
 
 app.use('/api',userRoute)
-
 app.use('/api',MessageRoutes)
+
+initSocket(server)
 
 const PORT = process.env.PORT 
 
-app.listen(PORT,()=>{
+server.listen(PORT,()=>{
     connectDb()
     console.log(`Server started at port ${PORT}`)
 })
