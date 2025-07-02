@@ -118,12 +118,14 @@ export const logout = async (req,res) => {
 };
 
 export const getOtherUsers = async (req, res) => {
+  
   try {
     const LoggedInUser = req.user;
 
     const AllUsers = await User.find({ _id: { $ne: LoggedInUser } }).select(
       "-password"
     );
+    
     return res.status(200).json({ users: AllUsers });
   } catch (error) {
     return res.status(500).json("Error in getting users");

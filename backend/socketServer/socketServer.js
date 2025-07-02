@@ -23,7 +23,6 @@ export const initSocket = (server) => {
       console.log('❌ User disconnected:', socket.id);
     });
   });
-
   return io;
 };
 

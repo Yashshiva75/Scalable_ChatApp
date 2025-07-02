@@ -12,6 +12,9 @@ export const chatAPI = {
     return await apiClient.get(`${ENDPOINTS.GET_MESSAGES}/${chatId}?page=${page}&limit=${limit}`);
   },
 
+  getConversation :async(id) =>{
+    return await apiClient.get(`${ENDPOINTS.GET_CONVO}/${id}`)
+  },
   // Create chat room
   createRoom: async (roomData) => {
     return await apiClient.post(ENDPOINTS.CREATE_ROOM, roomData);

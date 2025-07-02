@@ -1,7 +1,6 @@
 import {conversations} from '../models/conversations.js'
 import { message } from '../models/messageSchema.js';
 export const sendMessage = async(req,res)=>{
-  console.log('Api hit')
     try{
       const sendersId = req.user;
       const recieverId = req.params.id;
@@ -28,10 +27,10 @@ export const sendMessage = async(req,res)=>{
       }
 
       await gotConversation.save()
-
       return res.status(200).json({message:"Message sent Successfully"}) 
 
     }catch(error){
+      console.log('Error in send message',error)
       return res.status(500).json('Error in api')
     }
 }
@@ -44,11 +43,13 @@ export const getMessages = async(req,res)=>{
       const GetMessages = await conversations.findOne({
         participantsId:{$all:[senderId,recieverId]}
       }).populate("message")
-      console.log('Messages',GetMessages)
 
-      return res.status(200).json('Successfully got message')
+      const AllMessages = GetMessages.message
+      
+      return res.status(200).json({message:'Successfully got message',data:AllMessages})
 
    }catch(error){
+      console.log('Err in convo',error)
       return res.status(500).json('error in get mesg')
    }
 }

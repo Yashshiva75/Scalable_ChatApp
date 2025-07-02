@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { authApi } from "../Apis/authApis";
-import { showErrorToast } from "../Apis";
 import {useDispatch} from 'react-redux'
 import { setUser } from "../Store/userSlice";
+import { showSuccessToast,showErrorToast } from "../utils/toasts/ReactToast";
+import { useNavigate } from "react-router-dom";
 
 export default function AuthUI() {
 
   const dispatch = useDispatch()
+  const navigate = useNavigate()
 
   const [activeTab, setActiveTab] = useState("login");
   const [formData, setFormData] = useState({
@@ -30,11 +32,19 @@ export default function AuthUI() {
       const apiCall = activeTab === 'register' ? authApi.register(formData) : authApi.login(formData);
 
       const response = await apiCall;
-
+      
       console.log("response", response);
+      if(response.token){
+        navigate('/chat')
+        localStorage.setItem('token',response.token)
+        localStorage.setItem("user", JSON.stringify(response.user));
+      }
+      showSuccessToast('Logged In')
       dispatch(setUser({user:response.user,token:response.token}))
+      
     } catch (error) {
-      const errorMessage = showErrorToast(error);
+      showErrorToast("Error Logging In")
+      
       // Show error to user
     }
   };
@@ -61,7 +71,7 @@ export default function AuthUI() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-900 via-blue-900 to-purple-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo/Brand Section */}
         <div className="text-center mb-8">
