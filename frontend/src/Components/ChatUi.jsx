@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { userAPI } from "../Apis/userAPI";
 import { chatAPI } from "../Apis/chatAPI";
+import { useSocket } from "../SocketClient/SocketContext/SocketContext";
 export default function ChatApp() {
   const [activeUser, setActiveUser] = useState(0);
   const [selectedUser,setselectedUser] = useState('')
   const [newMessage, setNewMessage] = useState("");
   const [showChat, setShowChat] = useState(false);
+  const socket = useSocket()
   const messagesEndRef = useRef(null);
   const [messages, setMessages] = useState([
     {
@@ -101,6 +103,7 @@ export default function ChatApp() {
       };
       setMessages([...messages, newMsg]);
       setNewMessage("");
+      socket.emit("sendMessage",newMsg)
     }
   };
 
