@@ -3,8 +3,8 @@ import { ENDPOINTS } from './endpoint';
 
 export const chatAPI = {
   // Send message
-  sendMessage: async (receiverId) => {
-    return await apiClient.post(`${ENDPOINTS.SEND_MESSAGE}/${receiverId}`);
+  sendMessage: async ({receiverId,message}) => {
+    return await apiClient.post(`${ENDPOINTS.SEND_MESSAGE}/${receiverId}`,{message});
   },
 
   // Get messages for a chat
