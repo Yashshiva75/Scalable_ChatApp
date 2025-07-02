@@ -62,21 +62,11 @@ export default function ChatApp() {
   //Messaging Api
   const {data:convo,isLoading:convoLoading,isError} =useQuery({
     queryKey:["messages"],
-    queryFn:chatAPI.getConversation(selectedUser),
+    queryFn:()=>chatAPI.getConversation(selectedUser),
     enabled: !!selectedUser,
     staleTime:1000*60*5
   })
-
-  const {mutate:sendMessage,isLoading:messageLoading,isError:messageError} = useMutation({
-    mutationFn:chatAPI.sendMessage,
-    onSuccess:(data)=>{
-      console.log('Message sent',data)
-    },
-    onError:(error)=>{
-      console.log('Message sent error',error)
-    }
-  })
-
+  console.log('All msg',convo)
 
   // Function to scroll to bottom
   const scrollToBottom = () => {
@@ -88,13 +78,19 @@ export default function ChatApp() {
     scrollToBottom();
   }, [messages, []]);
 
-  console.log('receiverId',selectedUser)
+
+  const {mutate:sendMessage,isLoading:messageLoading,isError:messageError} = useMutation({
+    mutationFn:chatAPI.sendMessage,
+    onSuccess:(data)=>{
+      console.log('Message sent',data)
+    },
+    onError:(error)=>{
+      console.log('Message sent error',error)
+    }
+  })
+
   const handleSendMessage = (e) => {
     if (e) e.preventDefault();
-    const messagePayload = {
-      receiverId : selectedUser,
-      content : newMessage
-    }
     if (newMessage.trim()) {
       const newMsg = {
         id: messages.length + 1,
@@ -108,7 +104,14 @@ export default function ChatApp() {
       };
       setMessages([...messages, newMsg]);
       setNewMessage("");
+
       socket.emit("sendMessage",newMsg)
+
+      const messagePayload = {
+        receiverId : selectedUser,
+        message : newMessage
+      }
+
       sendMessage(messagePayload)
     }
   };
