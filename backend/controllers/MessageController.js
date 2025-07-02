@@ -32,6 +32,7 @@ export const sendMessage = async(req,res)=>{
       return res.status(200).json({message:"Message sent Successfully"}) 
 
     }catch(error){
+      console.log('Error in send message',error)
       return res.status(500).json('Error in api')
     }
 }
@@ -44,7 +45,6 @@ export const getMessages = async(req,res)=>{
       const GetMessages = await conversations.findOne({
         participantsId:{$all:[senderId,recieverId]}
       }).populate("message")
-      console.log('Messages',GetMessages)
 
       return res.status(200).json('Successfully got message')
 

@@ -88,8 +88,13 @@ export default function ChatApp() {
     scrollToBottom();
   }, [messages, []]);
 
+  console.log('receiverId',selectedUser)
   const handleSendMessage = (e) => {
     if (e) e.preventDefault();
+    const messagePayload = {
+      receiverId : selectedUser,
+      content : newMessage
+    }
     if (newMessage.trim()) {
       const newMsg = {
         id: messages.length + 1,
@@ -104,6 +109,7 @@ export default function ChatApp() {
       setMessages([...messages, newMsg]);
       setNewMessage("");
       socket.emit("sendMessage",newMsg)
+      sendMessage(messagePayload)
     }
   };
 

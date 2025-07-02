@@ -4,5 +4,5 @@ export const ENDPOINTS = {
   LOGOUT: '/api/logout',
   USER_LIST:'/api/getUsers',
   GET_CONVO:'/api/getmessages',
-  SEND_MESSAGE:'/sendmessage/:id'
+  SEND_MESSAGE:'/api/sendmessage'
 }
