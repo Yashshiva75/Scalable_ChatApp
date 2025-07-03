@@ -1,14 +1,18 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userAPI } from "../Apis/userAPI";
 import { chatAPI } from "../Apis/chatAPI";
 import { useSocket } from "../SocketClient/SocketContext/SocketContext";
+import { useSelector } from "react-redux";
 export default function ChatApp() {
   const [activeUser, setActiveUser] = useState(0);
   const [selectedUser,setselectedUser] = useState('')
   const [newMessage, setNewMessage] = useState("");
   const [showChat, setShowChat] = useState(false);
   const socket = useSocket()
+  const me = useSelector((state)=>state.user.user?.id)
+  const queryClient = useQueryClient()
+
   const messagesEndRef = useRef(null);
   const [messages, setMessages] = useState([
     {
@@ -17,28 +21,7 @@ export default function ChatApp() {
       sender: "other",
       time: "10:30 AM",
       status: "seen",
-    },
-    {
-      id: 2,
-      text: "I'm doing great! Just finished my morning workout. What about you?",
-      sender: "me",
-      time: "10:32 AM",
-      status: "delivered",
-    },
-    {
-      id: 3,
-      text: "That's awesome! I'm planning to hit the gym later today too.",
-      sender: "other",
-      time: "10:35 AM",
-      status: "seen",
-    },
-    {
-      id: 4,
-      text: "Nice! We should work out together sometime",
-      sender: "me",
-      time: "10:36 AM",
-      status: "seen",
-    },
+    }
   ]);
 
 
@@ -66,8 +49,10 @@ export default function ChatApp() {
     enabled: !!selectedUser,
     staleTime:1000*60*5
   })
-  console.log('All msg',convo)
 
+  const conversation = convo?.data;
+  
+    console.log('Convers',conversation)
   // Function to scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -80,9 +65,10 @@ export default function ChatApp() {
 
 
   const {mutate:sendMessage,isLoading:messageLoading,isError:messageError} = useMutation({
-    mutationFn:chatAPI.sendMessage,
+    mutationFn:chatAPI.sendMessage, 
     onSuccess:(data)=>{
       console.log('Message sent',data)
+      queryClient.invalidateQueries(['messages']);
     },
     onError:(error)=>{
       console.log('Message sent error',error)
@@ -94,6 +80,7 @@ export default function ChatApp() {
     if (newMessage.trim()) {
       const newMsg = {
         id: messages.length + 1,
+        receiverId : selectedUser,
         text: newMessage,
         sender: "me",
         time: new Date().toLocaleTimeString([], {
@@ -116,7 +103,13 @@ export default function ChatApp() {
     }
   };
 
-  
+ 
+
+      useEffect(() => {
+      if (conversation?.message) {
+        setMessages(conversation.message);
+      }
+    }, [conversation]);
 
   // Function to go back to user list on mobile
   const handleBackToUsers = () => {

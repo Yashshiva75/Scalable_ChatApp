@@ -44,7 +44,7 @@ export const getMessages = async(req,res)=>{
         participantsId:{$all:[senderId,recieverId]}
       }).populate("message")
 
-      const AllMessages = GetMessages.message
+      const AllMessages = GetMessages?.message
       
       return res.status(200).json({message:'Successfully got message',data:AllMessages})
 
