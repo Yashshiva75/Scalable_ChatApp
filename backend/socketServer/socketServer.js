@@ -16,8 +16,8 @@ export const initSocket = (server) => {
 
     socket.on('sendMessage', (data) => {
       console.log('📩 Message Received:', data);
-      io.emit('receiveMessage', data);
-    });
+      io.to(data.receiverId).emit('receiveMessage', data);
+    }); 
 
     socket.on('disconnect', () => {
       console.log('❌ User disconnected:', socket.id);
