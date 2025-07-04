@@ -39,7 +39,7 @@ export default function ChatApp() {
     setActiveUser(index);
     const selected = data?.users?.[index];
     setselectedUser(selected?._id);
-    setShowChat(true); // Show chat interface on mobile when user is clicked
+    setShowChat(true); 
   };
 
   //Messaging Api
@@ -76,32 +76,28 @@ export default function ChatApp() {
   })
 
   const handleSendMessage = (e) => {
-    if (e) e.preventDefault();
-    if (newMessage.trim()) {
-      const newMsg = {
-        id: messages.length + 1,
-        receiverId : selectedUser,
-        text: newMessage,
-        sender: "me",
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        status: "delivered",
-      };
-      setMessages([...messages, newMsg]);
-      setNewMessage("");
+  if (e) e.preventDefault();
+  if (newMessage.trim()) {
+    const messagePayload = {
+      receiverId: selectedUser,
+      message: newMessage,
+    };
 
-      socket.emit("sendMessage",newMsg)
+    socket.emit("sendMessage", {
+      ...messagePayload,
+      senderId: me,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    });
 
-      const messagePayload = {
-        receiverId : selectedUser,
-        message : newMessage
-      }
+    setNewMessage(""); // Clear input only
 
-      sendMessage(messagePayload)
-    }
-  };
+    sendMessage(messagePayload); // Send to backend
+  }
+};
+
 
  
 
@@ -110,6 +106,38 @@ export default function ChatApp() {
         setMessages(conversation.message);
       }
     }, [conversation]);
+
+        useEffect(() => {
+  if (!socket) return;
+
+  const handleReceiveMessage = (message) => {
+    const isDuplicate = messages.some(
+      (msg) =>
+        msg._id === message._id ||
+        (msg.text === message.text &&
+         msg.senderId === message.senderId &&
+         msg.time === message.time)
+    );
+
+    if (!isDuplicate) {
+      setMessages((prev) => [...prev, message]);
+    }
+  };
+
+  socket.on("receiveMessage", handleReceiveMessage);
+
+  return () => {
+    socket.off("receiveMessage", handleReceiveMessage);
+  };
+}, [socket, selectedUser, me, messages]);
+
+
+
+        useEffect(() => {
+      if (me && socket) {
+        socket.emit("join", me); // 👈 Send userId to server to join room
+      }
+    }, [me, socket]);
 
   // Function to go back to user list on mobile
   const handleBackToUsers = () => {
@@ -300,13 +328,11 @@ export default function ChatApp() {
 
         {/* Messages Container */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`chat ${
-                message.sender === "me" ? "chat-end" : "chat-start"
-              }`}
-            >
+          {messages.map((message, index) => (
+  <div
+    key={message._id || message.id || `${message.text}-${index}`}
+    className={`chat ${message.sender === "me" ? "chat-end" : "chat-start"}`}
+  >
               <div className="chat-image avatar">
                 <div className="w-6 rounded-full">
                   {/* <img

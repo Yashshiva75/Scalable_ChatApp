@@ -2,6 +2,8 @@ import { Server } from 'socket.io'
 
 
 let io;
+const connectedUsers = {}; // { userId: socket.id }
+
 
 export const initSocket = (server) => {
   io = new Server(server, {
@@ -14,9 +16,16 @@ export const initSocket = (server) => {
   io.on('connection', (socket) => {
     console.log('✅ New user connected:', socket.id);
 
+    socket.on('join',(userId)=>{
+      socket.join(userId)
+      console.log(`User ${userId} joined socket room`);
+    })
+
     socket.on('sendMessage', (data) => {
       console.log('📩 Message Received:', data);
       io.to(data.receiverId).emit('receiveMessage', data);
+      const { receiverId } = data;
+      io.to(receiverId).emit('receiveMessage', data);
     }); 
 
     socket.on('disconnect', () => {
