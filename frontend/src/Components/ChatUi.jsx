@@ -4,28 +4,20 @@ import { userAPI } from "../Apis/userAPI";
 import { chatAPI } from "../Apis/chatAPI";
 import { useSocket } from "../SocketClient/SocketContext/SocketContext";
 import { useSelector } from "react-redux";
+
 export default function ChatApp() {
   const [activeUser, setActiveUser] = useState(0);
-  const [selectedUser,setselectedUser] = useState('')
+  const [selectedUser, setselectedUser] = useState('');
   const [newMessage, setNewMessage] = useState("");
   const [showChat, setShowChat] = useState(false);
-  const socket = useSocket()
-  const me = useSelector((state)=>state.user.user?.id)
-  const queryClient = useQueryClient()
+  const socket = useSocket();
+  const me = useSelector((state) => state.user.user?.id);
+  const queryClient = useQueryClient();
 
   const messagesEndRef = useRef(null);
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "Hey! How are you doing today?",
-      sender: "other",
-      time: "10:30 AM",
-      status: "seen",
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
 
-
-  //Users api
+  // Users api
   const { data, isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: userAPI.getAllUsers,
@@ -33,26 +25,41 @@ export default function ChatApp() {
     cacheTime: 1000 * 60 * 30, // 30 minutes
   });
 
-
   // Modified click handler to toggle chat on mobile
   const handleUserClick = (index) => {
     setActiveUser(index);
     const selected = data?.users?.[index];
     setselectedUser(selected?._id);
-    setShowChat(true); 
+    setShowChat(true);
   };
 
-  //Messaging Api
-  const {data:convo,isLoading:convoLoading,isError} =useQuery({
-    queryKey:["messages"],
-    queryFn:()=>chatAPI.getConversation(selectedUser),
+  // Messaging Api
+  const { data: convo, isLoading: convoLoading, isError } = useQuery({
+    queryKey: ["messages", selectedUser],
+    queryFn: () => chatAPI.getConversation(selectedUser),
     enabled: !!selectedUser,
-    staleTime:1000*60*5
-  })
+    staleTime: 1000 * 60 * 5
+  });
 
   const conversation = convo?.data;
-  
-    console.log('Convers',conversation)
+
+  // Function to normalize message format
+  const normalizeMessage = (message, source = 'api') => {
+    return {
+      _id: message._id || message.id || `temp-${Date.now()}-${Math.random()}`,
+      text: message.text || message.message || message.content,
+      sender: message.senderId === me ? "me" : "other",
+      senderId: message.senderId,
+      receiverId: message.receiverId,
+      time: message.time || new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      status: message.status || "delivered",
+      source: source // Track where the message came from
+    };
+  };
+
   // Function to scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -61,83 +68,142 @@ export default function ChatApp() {
   // Auto-scroll when messages change
   useEffect(() => {
     scrollToBottom();
-  }, [messages, []]);
+  }, [messages]);
 
-
-  const {mutate:sendMessage,isLoading:messageLoading,isError:messageError} = useMutation({
-    mutationFn:chatAPI.sendMessage, 
-    onSuccess:(data)=>{
-      console.log('Message sent',data)
-      queryClient.invalidateQueries(['messages']);
-    },
-    onError:(error)=>{
-      console.log('Message sent error',error)
+  // Load messages from API when conversation changes
+  useEffect(() => {
+    if (conversation?.message) {
+      const normalizedMessages = conversation.message.map(msg => 
+        normalizeMessage(msg, 'api')
+      );
+      setMessages(normalizedMessages);
+    } else if (selectedUser) {
+      // Clear messages when selecting a new user with no conversation
+      setMessages([]);
     }
-  })
+  }, [conversation, selectedUser, me]);
+
+  const { mutate: sendMessage, isLoading: messageLoading, isError: messageError } = useMutation({
+    mutationFn: chatAPI.sendMessage,
+    onSuccess: (data) => {
+      console.log('Message sent successfully', data);
+      // Don't invalidate queries immediately, let the socket handle real-time updates
+      // queryClient.invalidateQueries(['messages', selectedUser]);
+    },
+    onError: (error) => {
+      console.log('Message send error', error);
+      // Remove the optimistic message on error
+      setMessages(prev => prev.filter(msg => !msg.isOptimistic));
+    }
+  });
 
   const handleSendMessage = (e) => {
-  if (e) e.preventDefault();
-  if (newMessage.trim()) {
-    const messagePayload = {
-      receiverId: selectedUser,
-      message: newMessage,
-    };
-
-    socket.emit("sendMessage", {
-      ...messagePayload,
-      senderId: me,
-      time: new Date().toLocaleTimeString([], {
+    if (e) e.preventDefault();
+    if (newMessage.trim() && selectedUser) {
+      const tempId = `temp-${Date.now()}-${Math.random()}`;
+      const currentTime = new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
-      }),
-    });
+      });
 
-    setNewMessage(""); // Clear input only
+      // Create optimistic message for immediate UI update
+      const optimisticMessage = {
+        _id: tempId,
+        text: newMessage,
+        sender: "me",
+        senderId: me,
+        receiverId: selectedUser,
+        time: currentTime,
+        status: "sending",
+        isOptimistic: true,
+        source: 'input'
+      };
 
-    sendMessage(messagePayload); // Send to backend
-  }
-};
+      // Add optimistic message to state
+      setMessages(prev => [...prev, optimisticMessage]);
 
+      // Prepare message payload
+      const messagePayload = {
+        receiverId: selectedUser,
+        message: newMessage,
+      };
 
- 
+      // Emit to socket
+      socket.emit("sendMessage", {
+        ...messagePayload,
+        senderId: me,
+        time: currentTime,
+        tempId: tempId // Send temp ID to match with response
+      });
 
-      useEffect(() => {
-      if (conversation?.message) {
-        setMessages(conversation.message);
-      }
-    }, [conversation]);
-
-        useEffect(() => {
-  if (!socket) return;
-
-  const handleReceiveMessage = (message) => {
-    const isDuplicate = messages.some(
-      (msg) =>
-        msg._id === message._id ||
-        (msg.text === message.text &&
-         msg.senderId === message.senderId &&
-         msg.time === message.time)
-    );
-
-    if (!isDuplicate) {
-      setMessages((prev) => [...prev, message]);
+      // Clear input
+      setNewMessage("");
+      
+      // Send to backend
+      sendMessage(messagePayload);
     }
   };
 
-  socket.on("receiveMessage", handleReceiveMessage);
+  // Socket message handling
+  useEffect(() => {
+    if (!socket) return;
 
-  return () => {
-    socket.off("receiveMessage", handleReceiveMessage);
-  };
-}, [socket, selectedUser, me, messages]);
+    const handleReceiveMessage = (message) => {
+      const normalizedMessage = normalizeMessage(message, 'socket');
+      
+      setMessages(prev => {
+        // Check if this is a confirmation of our sent message
+        if (message.tempId) {
+          // Replace the optimistic message with the real one
+          return prev.map(msg => 
+            msg.isOptimistic && msg._id === message.tempId
+              ? { ...normalizedMessage, status: "delivered" }
+              : msg
+          );
+        }
 
+        // Check for duplicates
+        const isDuplicate = prev.some(msg => 
+          msg._id === normalizedMessage._id ||
+          (msg.text === normalizedMessage.text &&
+           msg.senderId === normalizedMessage.senderId &&
+           Math.abs(new Date(`1970-01-01 ${msg.time}`) - new Date(`1970-01-01 ${normalizedMessage.time}`)) < 60000) // Within 1 minute
+        );
 
+        if (isDuplicate) {
+          return prev;
+        }
 
-        useEffect(() => {
-      if (me && socket) {
-        socket.emit("join", me); // 👈 Send userId to server to join room
-      }
-    }, [me, socket]);
+        return [...prev, normalizedMessage];
+      });
+    };
+
+    const handleMessageStatus = (data) => {
+      // Handle message status updates (delivered, seen, etc.)
+      setMessages(prev =>
+        prev.map(msg =>
+          msg._id === data.messageId
+            ? { ...msg, status: data.status }
+            : msg
+        )
+      );
+    };
+
+    socket.on("receiveMessage", handleReceiveMessage);
+    socket.on("messageStatus", handleMessageStatus);
+
+    return () => {
+      socket.off("receiveMessage", handleReceiveMessage);
+      socket.off("messageStatus", handleMessageStatus);
+    };
+  }, [socket, selectedUser, me]);
+
+  // Join socket room
+  useEffect(() => {
+    if (me && socket) {
+      socket.emit("join", me);
+    }
+  }, [me, socket]);
 
   // Function to go back to user list on mobile
   const handleBackToUsers = () => {
@@ -145,10 +211,7 @@ export default function ChatApp() {
   };
 
   return (
-    <div
-      className="h-screen bg-base-300 flex overflow-hidden"
-      data-theme="dark"
-    >
+    <div className="h-screen bg-base-300 flex overflow-hidden" data-theme="dark">
       {/* Left Sidebar - Users List */}
       <div
         className={`sm:w-80 w-full bg-base-200 border-r border-base-300 flex flex-col h-full overflow-hidden ${
@@ -167,9 +230,7 @@ export default function ChatApp() {
               </div>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-base-content">
-                ChatFlow
-              </h2>
+              <h2 className="text-lg font-semibold text-base-content">ChatFlow</h2>
               <p className="text-sm text-base-content/60">Online</p>
             </div>
           </div>
@@ -212,9 +273,6 @@ export default function ChatApp() {
                     <div className="avatar">
                       <div className="w-12 rounded-full relative">
                         <img src={user?.profilePhoto} alt={user.fullName} />
-                        {/* {user.online && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
-                        )} */}
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -222,9 +280,7 @@ export default function ChatApp() {
                         <h3 className="font-medium text-base-content truncate">
                           {user.userName}
                         </h3>
-                        <span className="text-xs text-base-content/60">
-                          04:26
-                        </span>
+                        <span className="text-xs text-base-content/60">04:26</span>
                       </div>
                       <div className="flex justify-between items-center mt-1">
                         <p className="text-sm text-base-content/60 truncate">
@@ -252,74 +308,37 @@ export default function ChatApp() {
         {/* Chat Header */}
         <div className="flex-shrink-0 p-4 border-b border-base-300 bg-base-200">
           <div className="flex items-center gap-3">
-            {/* Back button for mobile */}
             <button
               onClick={handleBackToUsers}
               className="btn btn-ghost btn-sm btn-circle md:hidden"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
 
             <div className="avatar">
-              <div className="w-10 rounded-full relative ">
+              <div className="w-10 rounded-full relative">
                 <img
                   src={data?.users?.[activeUser]?.profilePhoto}
                   alt={data?.users?.[activeUser]?.fullName}
                 />
-                {/* {users[activeUser].online && (
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
-                )} */}
               </div>
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-base-content">
                 {data?.users?.[activeUser]?.userName}
               </h3>
-              {/* <p className="text-sm text-base-content/60">
-                {users[activeUser].online ? "Online" : "Last seen 2 hours ago"}
-              </p> */}
             </div>
             <div className="flex gap-2">
               <button className="btn btn-ghost btn-sm btn-circle">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                  />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
               </button>
               <button className="btn btn-ghost btn-sm btn-circle">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
               </button>
             </div>
@@ -329,73 +348,39 @@ export default function ChatApp() {
         {/* Messages Container */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {messages.map((message, index) => (
-  <div
-    key={message._id || message.id || `${message.text}-${index}`}
-    className={`chat ${message.sender === "me" ? "chat-end" : "chat-start"}`}
-  >
+            <div
+              key={message._id || `message-${index}`}
+              className={`chat ${message.sender === "me" ? "chat-end" : "chat-start"}`}
+            >
               <div className="chat-image avatar">
-                <div className="w-6 rounded-full">
-                  {/* <img
-                    src={
-                      message.sender === "me"
-                        ? "https://api.dicebear.com/7.x/avataaars/svg?seed=Me&backgroundColor=a8e6cf"
-                        : users[activeUser].profilePhoto
-                    }
-                    alt="Avatar"
-                  /> */}
-                </div>
+                <div className="w-6 rounded-full"></div>
               </div>
               <div className="chat-header">
-                <span className="text-xs text-base-content/60">
-                  {message.time}
-                </span>
+                <span className="text-xs text-base-content/60">{message.time}</span>
+                {message.isOptimistic && (
+                  <span className="text-xs text-warning ml-2">Sending...</span>
+                )}
               </div>
               <div
                 className={`chat-bubble text-sm max-w-xs ${
-                  message.sender === "me"
-                    ? "chat-bubble-primary"
-                    : "chat-bubble-secondary"
-                }`}
+                  message.sender === "me" ? "chat-bubble-primary" : "chat-bubble-secondary"
+                } ${message.isOptimistic ? "opacity-70" : ""}`}
               >
                 {message.text}
               </div>
-              {message.sender === "me" && (
+              {message.sender === "me" && !message.isOptimistic && (
                 <div className="chat-footer opacity-50 flex items-center gap-1">
                   {message.status === "delivered" ? (
-                    <svg
-                      className="w-3 h-3 text-base-content/60"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
+                    <svg className="w-3 h-3 text-base-content/60" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   ) : (
                     <div className="flex">
-                      <svg
-                        className="w-3 h-3 text-primary"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
+                      <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
-                      <svg
-                        className="w-3 h-3 text-primary -ml-1"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
+                      <svg className="w-3 h-3 text-primary -ml-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>
                   )}
@@ -406,7 +391,6 @@ export default function ChatApp() {
               )}
             </div>
           ))}
-          {/* Invisible div to scroll to */}
           <div ref={messagesEndRef} />
         </div>
 
@@ -414,18 +398,8 @@ export default function ChatApp() {
         <div className="flex-shrink-0 p-4 border-t border-base-300 bg-base-200">
           <div className="flex gap-2">
             <button type="button" className="btn btn-ghost btn-circle btn-sm">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
               </svg>
             </button>
             <input
@@ -437,38 +411,22 @@ export default function ChatApp() {
               className="input input-bordered flex-1 bg-base-300 border-base-300 focus:border-primary"
             />
             <button type="button" className="btn btn-ghost btn-circle btn-sm">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.01M15 10h1.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.01M15 10h1.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
             <button
               onClick={handleSendMessage}
               className="btn btn-primary btn-circle btn-sm"
-              disabled={!newMessage.trim()}
+              disabled={!newMessage.trim() || messageLoading}
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                />
-              </svg>
+              {messageLoading ? (
+                <span className="loading loading-spinner loading-xs"></span>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              )}
             </button>
           </div>
         </div>
