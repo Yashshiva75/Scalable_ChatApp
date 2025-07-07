@@ -41,7 +41,8 @@ export default function ChatApp() {
     staleTime: 1000 * 60 * 5
   });
 
-  const conversation = convo?.data;
+  const conversation = convo
+  console.log('Humari chat',conversation)
 
   // Function to normalize message format
   const normalizeMessage = (message, source = 'api') => {
@@ -72,16 +73,20 @@ export default function ChatApp() {
 
   // Load messages from API when conversation changes
   useEffect(() => {
-    if (conversation?.message) {
-      const normalizedMessages = conversation.message.map(msg => 
-        normalizeMessage(msg, 'api')
-      );
-      setMessages(normalizedMessages);
-    } else if (selectedUser) {
-      // Clear messages when selecting a new user with no conversation
-      setMessages([]);
-    }
-  }, [conversation, selectedUser, me]);
+     console.log('useEffect triggered');
+  console.log('selectedUser:', selectedUser);
+  console.log('conversation:', conversation);
+  console.log('me:', me);
+  if (conversation && Array.isArray(conversation)) {
+    const normalizedMessages = conversation
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      .map(msg => normalizeMessage(msg, 'api'));
+    setMessages(normalizedMessages);
+  } else if (selectedUser) {
+    setMessages([]);
+  }
+}, [conversation, selectedUser, me]);  
+
 
   const { mutate: sendMessage, isLoading: messageLoading, isError: messageError } = useMutation({
     mutationFn: chatAPI.sendMessage,
@@ -197,6 +202,8 @@ export default function ChatApp() {
       socket.off("messageStatus", handleMessageStatus);
     };
   }, [socket, selectedUser, me]);
+
+  console.log('main thing',messages)
 
   // Join socket room
   useEffect(() => {
@@ -357,9 +364,7 @@ export default function ChatApp() {
               </div>
               <div className="chat-header">
                 <span className="text-xs text-base-content/60">{message.time}</span>
-                {message.isOptimistic && (
-                  <span className="text-xs text-warning ml-2">Sending...</span>
-                )}
+              
               </div>
               <div
                 className={`chat-bubble text-sm max-w-xs ${
