@@ -6,7 +6,7 @@ export const authApi = {
         const response = await apiClient.post(ENDPOINTS.LOGIN,credentials);
 
     if (response.token) {
-      localStorage.setItem('token', response.token);
+      sessionStorage.setItem('token', response.token);
     }
     return response;
 
@@ -23,7 +23,7 @@ export const authApi = {
 
     logout : async(credentials)=>{
         const response = await apiClient.post(ENDPOINTS.LOGOUT)
-        localStorage.removeItem('token')
+        sessionStorage.removeItem('token')
         return response
     }
 

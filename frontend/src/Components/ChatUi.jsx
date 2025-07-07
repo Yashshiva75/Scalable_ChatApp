@@ -4,6 +4,7 @@ import { userAPI } from "../Apis/userAPI";
 import { chatAPI } from "../Apis/chatAPI";
 import { useSocket } from "../SocketClient/SocketContext/SocketContext";
 import { useSelector } from "react-redux";
+import { authApi } from "../Apis/authApis";
 
 export default function ChatApp() {
   const [activeUser, setActiveUser] = useState(0);
@@ -42,8 +43,6 @@ export default function ChatApp() {
   });
 
   const conversation = convo
-  console.log('Humari chat',conversation)
-
   // Function to normalize message format
   const normalizeMessage = (message, source = 'api') => {
     return {
@@ -73,19 +72,17 @@ export default function ChatApp() {
 
   // Load messages from API when conversation changes
   useEffect(() => {
-     console.log('useEffect triggered');
-  console.log('selectedUser:', selectedUser);
-  console.log('conversation:', conversation);
-  console.log('me:', me);
-  if (conversation && Array.isArray(conversation)) {
-    const normalizedMessages = conversation
+  if (conversation?.data && Array.isArray(conversation.data)) {
+    const normalizedMessages = conversation.data
       .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
       .map(msg => normalizeMessage(msg, 'api'));
     setMessages(normalizedMessages);
   } else if (selectedUser) {
     setMessages([]);
   }
-}, [conversation, selectedUser, me]);  
+}, [conversation, selectedUser, me]);
+  
+    console.log('yyyy',messages)
 
 
   const { mutate: sendMessage, isLoading: messageLoading, isError: messageError } = useMutation({
@@ -101,6 +98,16 @@ export default function ChatApp() {
       setMessages(prev => prev.filter(msg => !msg.isOptimistic));
     }
   });
+
+  const userString = sessionStorage.getItem("user"); // yeh ek JSON string hai
+  const user = userString ? JSON.parse(userString) : null;
+
+  const loggedInUser = user?.fullName;
+
+  const {mutate:logout,isLoading:LoggingOut} = useMutation({
+    mutationFn:authApi.logout
+  })
+
 
   const handleSendMessage = (e) => {
     if (e) e.preventDefault();
@@ -172,7 +179,7 @@ export default function ChatApp() {
           msg._id === normalizedMessage._id ||
           (msg.text === normalizedMessage.text &&
            msg.senderId === normalizedMessage.senderId &&
-           Math.abs(new Date(`1970-01-01 ${msg.time}`) - new Date(`1970-01-01 ${normalizedMessage.time}`)) < 60000) // Within 1 minute
+           Math.abs(new Date(`1970-01-01 ${msg.time}`) - new Date(`1970-01-01 ${normalizedMessage.time}`)) < 60000) 
         );
 
         if (isDuplicate) {
@@ -203,8 +210,6 @@ export default function ChatApp() {
     };
   }, [socket, selectedUser, me]);
 
-  console.log('main thing',messages)
-
   // Join socket room
   useEffect(() => {
     if (me && socket) {
@@ -231,13 +236,13 @@ export default function ChatApp() {
             <div className="avatar">
               <div className="w-10 rounded-full">
                 <img
-                  src="https://api.dicebear.com/7.x/avataaars/svg?seed=Me&backgroundColor=a8e6cf"
+                  src="https://api.dicebear.com/9.x/bottts/svg"
                   alt="My Avatar"
                 />
               </div>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-base-content">ChatFlow</h2>
+              <h2 className="text-lg font-semibold text-base-content">{loggedInUser.toUpperCase()}</h2>
               <p className="text-sm text-base-content/60">Online</p>
             </div>
           </div>
@@ -348,6 +353,11 @@ export default function ChatApp() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
               </button>
+              <button className="btn btn-ghost btn-sm btn-circle">
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 11-4 0v-1m0-8V7a2 2 0 114 0v1" />
+  </svg>
+</button>
             </div>
           </div>
         </div>
