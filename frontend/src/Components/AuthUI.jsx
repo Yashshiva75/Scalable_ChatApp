@@ -33,11 +33,11 @@ export default function AuthUI() {
 
       const response = await apiCall;
       
-      console.log("response", response);
       if(response.token){
         navigate('/chat')
-        localStorage.setItem('token',response.token)
-        localStorage.setItem("user", JSON.stringify(response.user));
+        sessionStorage.setItem('token', response.token);
+        sessionStorage.setItem("user", JSON.stringify(response.user));
+
       }
       showSuccessToast('Logged In')
       dispatch(setUser({user:response.user,token:response.token}))
