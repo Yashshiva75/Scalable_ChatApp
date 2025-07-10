@@ -5,6 +5,7 @@ import { chatAPI } from "../Apis/chatAPI";
 import { useSocket } from "../SocketClient/SocketContext/SocketContext";
 import { useSelector } from "react-redux";
 import { authApi } from "../Apis/authApis";
+import { useNavigate } from "react-router-dom";
 
 export default function ChatApp() {
   const [activeUser, setActiveUser] = useState(0);
@@ -107,7 +108,8 @@ export default function ChatApp() {
   const {mutate:logout,isLoading:LoggingOut} = useMutation({
     mutationFn:authApi.logout
   })
-
+   
+  const navigate = useNavigate();
 
   const handleSendMessage = (e) => {
     if (e) e.preventDefault();
@@ -223,7 +225,10 @@ export default function ChatApp() {
   };
 
   return (
-    <div className="h-screen bg-base-300 flex overflow-hidden" data-theme="dark">
+    <div
+      className="h-screen bg-base-300 flex overflow-hidden"
+      data-theme="dark"
+    >
       {/* Left Sidebar - Users List */}
       <div
         className={`sm:w-80 w-full bg-base-200 border-r border-base-300 flex flex-col h-full overflow-hidden ${
@@ -232,21 +237,41 @@ export default function ChatApp() {
       >
         {/* Header */}
         <div className="p-4 border-b border-base-300">
-          <div className="flex items-center gap-3">
-            <div className="avatar">
-              <div className="w-10 rounded-full">
-                <img
-                  src="https://api.dicebear.com/9.x/bottts/svg"
-                  alt="My Avatar"
-                />
-              </div>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-base-content">{loggedInUser.toUpperCase()}</h2>
-              <p className="text-sm text-base-content/60">Online</p>
-            </div>
-          </div>
-        </div>
+  <div className="flex items-center gap-3">
+    {/* Avatar */}
+    <div className="avatar">
+      <div className="w-10 rounded-full">
+        <img
+          src="https://api.dicebear.com/9.x/bottts/svg"
+          alt="My Avatar"
+        />
+      </div>
+    </div>
+
+    {/* Username and status */}
+    <div>
+      <h2 className="text-lg font-semibold text-base-content">
+        {loggedInUser?.toUpperCase()}
+      </h2>
+      <p className="text-sm text-base-content/60">Online</p>
+    </div>
+
+    {/* Logout button aligned right */}
+    <button
+      onClick={() => {
+        logout();
+        sessionStorage.clear();
+        window.location.href = "/";
+        navigate("/")
+      }}
+       className="btn btn-warning  btn-sm ml-auto"
+      title="Logout"
+    >
+      Logout
+    </button>
+  </div>
+</div>
+
 
         {/* Search */}
         <div className="p-4">
@@ -292,7 +317,9 @@ export default function ChatApp() {
                         <h3 className="font-medium text-base-content truncate">
                           {user.userName}
                         </h3>
-                        <span className="text-xs text-base-content/60">04:26</span>
+                        <span className="text-xs text-base-content/60">
+                          04:26
+                        </span>
                       </div>
                       <div className="flex justify-between items-center mt-1">
                         <p className="text-sm text-base-content/60 truncate">
@@ -324,8 +351,18 @@ export default function ChatApp() {
               onClick={handleBackToUsers}
               className="btn btn-ghost btn-sm btn-circle md:hidden"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
 
@@ -344,20 +381,36 @@ export default function ChatApp() {
             </div>
             <div className="flex gap-2">
               <button className="btn btn-ghost btn-sm btn-circle">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                  />
                 </svg>
               </button>
               <button className="btn btn-ghost btn-sm btn-circle">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
                 </svg>
               </button>
-              <button className="btn btn-ghost btn-sm btn-circle">
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 11-4 0v-1m0-8V7a2 2 0 114 0v1" />
-  </svg>
-</button>
+              
             </div>
           </div>
         </div>
@@ -367,18 +420,23 @@ export default function ChatApp() {
           {messages.map((message, index) => (
             <div
               key={message._id || `message-${index}`}
-              className={`chat ${message.sender === "me" ? "chat-end" : "chat-start"}`}
+              className={`chat ${
+                message.sender === "me" ? "chat-end" : "chat-start"
+              }`}
             >
               <div className="chat-image avatar">
                 <div className="w-6 rounded-full"></div>
               </div>
               <div className="chat-header">
-                <span className="text-xs text-base-content/60">{message.time}</span>
-              
+                <span className="text-xs text-base-content/60">
+                  {message.time}
+                </span>
               </div>
               <div
                 className={`chat-bubble text-sm max-w-xs ${
-                  message.sender === "me" ? "chat-bubble-primary" : "chat-bubble-secondary"
+                  message.sender === "me"
+                    ? "chat-bubble-primary"
+                    : "chat-bubble-secondary"
                 } ${message.isOptimistic ? "opacity-70" : ""}`}
               >
                 {message.text}
@@ -386,16 +444,40 @@ export default function ChatApp() {
               {message.sender === "me" && !message.isOptimistic && (
                 <div className="chat-footer opacity-50 flex items-center gap-1">
                   {message.status === "delivered" ? (
-                    <svg className="w-3 h-3 text-base-content/60" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <svg
+                      className="w-3 h-3 text-base-content/60"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   ) : (
                     <div className="flex">
-                      <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <svg
+                        className="w-3 h-3 text-primary"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
                       </svg>
-                      <svg className="w-3 h-3 text-primary -ml-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <svg
+                        className="w-3 h-3 text-primary -ml-1"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
                   )}
@@ -413,8 +495,18 @@ export default function ChatApp() {
         <div className="flex-shrink-0 p-4 border-t border-base-300 bg-base-200">
           <div className="flex gap-2">
             <button type="button" className="btn btn-ghost btn-circle btn-sm">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                />
               </svg>
             </button>
             <input
@@ -426,8 +518,18 @@ export default function ChatApp() {
               className="input input-bordered flex-1 bg-base-300 border-base-300 focus:border-primary"
             />
             <button type="button" className="btn btn-ghost btn-circle btn-sm">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.01M15 10h1.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.01M15 10h1.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </button>
             <button
@@ -438,8 +540,18 @@ export default function ChatApp() {
               {messageLoading ? (
                 <span className="loading loading-spinner loading-xs"></span>
               ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
                 </svg>
               )}
             </button>
