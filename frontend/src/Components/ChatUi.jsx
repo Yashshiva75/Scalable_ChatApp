@@ -237,7 +237,9 @@ export default function ChatApp() {
       >
         {/* Header */}
         <div className="p-4 border-b border-base-300">
-  <div className="flex items-center gap-3">
+  <div className="flex items-center gap-3"
+  onClick={()=>navigate('/profile')}
+  >
     {/* Avatar */}
     <div className="avatar">
       <div className="w-10 rounded-full">

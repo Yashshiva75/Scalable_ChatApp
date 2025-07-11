@@ -9,6 +9,7 @@ import AuthUI from "./Components/AuthUI";
 import { setUser } from "./Store/userSlice";
 import { useDispatch } from "react-redux";
 import { PublicRoute } from "./utils/PublicRoute/PublicRoute";
+import Profile from "./Components/Profile";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -42,10 +43,15 @@ const App = () => {
             path="/chat"
             element={
               <ProtectedRoute>
-                <ChatApp />
+                <ChatApp/>
               </ProtectedRoute>
             }
           />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile/>
+            </ProtectedRoute>
+          }/>
         </Routes>
       </BrowserRouter>
     </>
