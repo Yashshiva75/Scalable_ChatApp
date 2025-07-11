@@ -62,7 +62,7 @@ const ProfilePage = () => {
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <button className='btn btn-warning'
+          <button className='btn btn-outline btn-info'
           onClick={()=>navigate('/chat')}
           >
             <MoveLeft />
