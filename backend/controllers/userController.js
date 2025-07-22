@@ -131,3 +131,31 @@ export const getOtherUsers = async (req, res) => {
     return res.status(500).json("Error in getting users");
   }
 };
+
+//Edit profile
+export const editUserProfile = async(req,res)=>{
+  try{
+      const userId = req.user;
+      const {fullName,userName,profilePhoto} = req.body;
+      console.log('fullName',fullName,'userName',userName,'userId',userId)
+
+      const updatedUser = await User.findByIdAndUpdate(userId,{
+        fullName:fullName,
+        userName:userName,
+        profilePhoto:profilePhoto
+      },
+    {new:true}
+    )
+
+    if(!updatedUser){
+      return res.status(404).json({message:'User not found or error in updating'})
+    }
+    console.log('updateduser',updatedUser)
+    return res.status(200).json({user:updatedUser,message:'user details updated successfully'})
+
+  }catch(error){
+    console.log('Error in update profile',error)
+        return res.status(500).json({message:'Error in api'})
+
+  }
+}

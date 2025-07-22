@@ -2,18 +2,22 @@ import React, { useState } from 'react';
 import { Camera, Edit3, Heart, MessageCircle, Users, Check, X } from 'lucide-react';
 import { MoveLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { userAPI } from '../Apis/userAPI';
+import { useQuery } from '@tanstack/react-query';
+
 const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate()
+  const loggedInUser = useSelector((state)=>state.user.user)
+
+  console.log('user hu',loggedInUser)
 
   const [profile, setProfile] = useState({
-    name: 'Alex Johnson',
-    age: '24',
+    fullName: loggedInUser?.fullName.toUpperCase(),
     status: 'Always ready for new adventures! 🌟',
-    profilePicture: null,
+    profilePicture: loggedInUser?.profilePhoto,
     joinDate: 'March 2024',
-    friendsCount: 127,
-    chatsCount: 89
   });
 
   const [editProfile, setEditProfile] = useState({ ...profile });
@@ -21,6 +25,7 @@ const ProfilePage = () => {
   const handleEdit = () => {
     setIsEditing(true);
     setEditProfile({ ...profile });
+    updateprofile(editProfile)
   };
 
   const handleSave = () => {
@@ -57,6 +62,15 @@ const ProfilePage = () => {
     "Custom status..."
   ];
 
+
+  const updateprofile = async(data)=>{
+    try{
+      const updateduser = await userAPI.updateProfile(data)
+    return updateduser
+    }catch(error){
+      console.log('Error in updating',error)
+    }
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4">
       <div className="max-w-md mx-auto">
@@ -110,7 +124,7 @@ const ProfilePage = () => {
                   />
                 ) : (
                   <span className="text-3xl font-bold text-white">
-                    {(isEditing ? editProfile.name : profile.name).split(' ').map(n => n[0]).join('')}
+                    {(isEditing ? editProfile.fullName : profile.fullName).split(' ').map(n => n[0]).join('')}
                   </span>
                 )}
               </div>
@@ -136,12 +150,12 @@ const ProfilePage = () => {
                   type="text"
                   value={editProfile.name}
                   onChange={(e) => setEditProfile({ ...editProfile, name: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 border text-gray-500 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Enter your name"
                 />
               ) : (
-                <div className="text-xl font-semibold text-gray-800 px-4 py-3 bg-gray-50 rounded-2xl">
-                  {profile.name}
+                <div className="text-xl  font-semibold text-gray-800 px-4 py-3 bg-gray-50 rounded-2xl">
+                  {profile.fullName}
                 </div>
               )}
             </div>
@@ -154,14 +168,14 @@ const ProfilePage = () => {
                   type="number"
                   value={editProfile.age}
                   onChange={(e) => setEditProfile({ ...editProfile, age: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 border text-black border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Enter your age"
                   min="13"
                   max="100"
                 />
               ) : (
                 <div className="text-lg text-gray-800 px-4 py-3 bg-gray-50 rounded-2xl">
-                  {profile.age} years old
+                  IMMORTALL!! years old
                 </div>
               )}
             </div>
@@ -174,7 +188,7 @@ const ProfilePage = () => {
                   <select
                     value={editProfile.status}
                     onChange={(e) => setEditProfile({ ...editProfile, status: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-3 border text-gray-500 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
                     {statusOptions.map((option, index) => (
                       <option key={index} value={option}>
@@ -188,7 +202,7 @@ const ProfilePage = () => {
                       value={editProfile.customStatus || ''}
                       onChange={(e) => setEditProfile({ ...editProfile, status: e.target.value })}
                       placeholder="Enter your custom status"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      className="w-full px-4 py-3 text-gray-500 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     />
                   )}
                 </div>
