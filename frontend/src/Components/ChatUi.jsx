@@ -82,7 +82,7 @@ export default function ChatApp() {
     scrollToBottom();
   }, [messages]);
 
-  // Load messages from API when conversation changes
+  // Load messages from API when conversation 
   useEffect(() => {
     if (conversation?.data && Array.isArray(conversation.data)) {
       const normalizedMessages = conversation.data
@@ -125,8 +125,8 @@ export default function ChatApp() {
 
   const userString = sessionStorage.getItem("user"); // yeh ek JSON string hai
   const user = userString ? JSON.parse(userString) : null;
-
-  const loggedInUser = user?.fullName;
+  console.log('this is currecnt',user)
+  const loggedInUser = user?.userName;
 
   const { mutate: logout, isLoading: LoggingOut } = useMutation({
     mutationFn: authApi.logout,
