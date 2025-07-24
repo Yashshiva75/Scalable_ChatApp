@@ -1,5 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { userAPI } from "../Apis/userAPI";
 import { chatAPI } from "../Apis/chatAPI";
 import { useSocket } from "../SocketClient/SocketContext/SocketContext";
@@ -9,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function ChatApp() {
   const [activeUser, setActiveUser] = useState(0);
-  const [selectedUser, setselectedUser] = useState('');
+  const [selectedUser, setselectedUser] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [showChat, setShowChat] = useState(false);
   const socket = useSocket();
@@ -36,28 +41,34 @@ export default function ChatApp() {
   };
 
   // Messaging Api
-  const { data: convo, isLoading: convoLoading, isError } = useQuery({
+  const {
+    data: convo,
+    isLoading: convoLoading,
+    isError,
+  } = useQuery({
     queryKey: ["messages", selectedUser],
     queryFn: () => chatAPI.getConversation(selectedUser),
     enabled: !!selectedUser,
-    staleTime: 1000 * 60 * 5
+    staleTime: 1000 * 60 * 5,
   });
 
-  const conversation = convo
+  const conversation = convo;
   // Function to normalize message format
-  const normalizeMessage = (message, source = 'api') => {
+  const normalizeMessage = (message, source = "api") => {
     return {
       _id: message._id || message.id || `temp-${Date.now()}-${Math.random()}`,
       text: message.text || message.message || message.content,
       sender: message.senderId === me ? "me" : "other",
       senderId: message.senderId,
       receiverId: message.receiverId,
-      time: message.time || new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      time:
+        message.time ||
+        new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       status: message.status || "delivered",
-      source: source // Track where the message came from
+      source: source, // Track where the message came from
     };
   };
 
@@ -71,44 +82,56 @@ export default function ChatApp() {
     scrollToBottom();
   }, [messages]);
 
-  // Load messages from API when conversation changes
+  // Load messages from API when conversation 
   useEffect(() => {
-  if (conversation?.data && Array.isArray(conversation.data)) {
-    const normalizedMessages = conversation.data
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-      .map(msg => normalizeMessage(msg, 'api'));
-    setMessages(normalizedMessages);
-  } else if (selectedUser) {
-    setMessages([]);
-  }
-}, [conversation, selectedUser, me]);
-  
-    console.log('yyyy',messages)
+    if (conversation?.data && Array.isArray(conversation.data)) {
+      const normalizedMessages = conversation.data
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+        .map((msg) => normalizeMessage(msg, "api"));
+      setMessages(normalizedMessages);
+    } else if (selectedUser) {
+      setMessages([]);
+    }
+  }, [conversation, selectedUser, me]);
 
+  console.log("yyyy", messages);
 
-  const { mutate: sendMessage, isLoading: messageLoading, isError: messageError } = useMutation({
+//   useEffect(() => {
+//   // Auto-select first user when users data loads and no user is currently selected
+//   if (data?.users?.length > 0 && !selectedUser) {
+//     setActiveUser(0);
+//     setselectedUser(data.users[0]._id);
+//     setShowChat(true); // Show chat on desktop
+//   }
+// }, [data?.users, selectedUser]);
+
+  const {
+    mutate: sendMessage,
+    isLoading: messageLoading,
+    isError: messageError,
+  } = useMutation({
     mutationFn: chatAPI.sendMessage,
     onSuccess: (data) => {
-      console.log('Message sent successfully', data);
+      console.log("Message sent successfully", data);
       // Don't invalidate queries immediately, let the socket handle real-time updates
       // queryClient.invalidateQueries(['messages', selectedUser]);
     },
     onError: (error) => {
-      console.log('Message send error', error);
+      console.log("Message send error", error);
       // Remove the optimistic message on error
-      setMessages(prev => prev.filter(msg => !msg.isOptimistic));
-    }
+      setMessages((prev) => prev.filter((msg) => !msg.isOptimistic));
+    },
   });
 
   const userString = sessionStorage.getItem("user"); // yeh ek JSON string hai
   const user = userString ? JSON.parse(userString) : null;
+  console.log('this is currecnt',user)
+  const loggedInUser = user?.userName;
 
-  const loggedInUser = user?.fullName;
+  const { mutate: logout, isLoading: LoggingOut } = useMutation({
+    mutationFn: authApi.logout,
+  });
 
-  const {mutate:logout,isLoading:LoggingOut} = useMutation({
-    mutationFn:authApi.logout
-  })
-   
   const navigate = useNavigate();
 
   const handleSendMessage = (e) => {
@@ -130,11 +153,11 @@ export default function ChatApp() {
         time: currentTime,
         status: "sending",
         isOptimistic: true,
-        source: 'input'
+        source: "input",
       };
 
       // Add optimistic message to state
-      setMessages(prev => [...prev, optimisticMessage]);
+      setMessages((prev) => [...prev, optimisticMessage]);
 
       // Prepare message payload
       const messagePayload = {
@@ -147,12 +170,12 @@ export default function ChatApp() {
         ...messagePayload,
         senderId: me,
         time: currentTime,
-        tempId: tempId // Send temp ID to match with response
+        tempId: tempId, // Send temp ID to match with response
       });
 
       // Clear input
       setNewMessage("");
-      
+
       // Send to backend
       sendMessage(messagePayload);
     }
@@ -163,13 +186,13 @@ export default function ChatApp() {
     if (!socket) return;
 
     const handleReceiveMessage = (message) => {
-      const normalizedMessage = normalizeMessage(message, 'socket');
-      
-      setMessages(prev => {
+      const normalizedMessage = normalizeMessage(message, "socket");
+
+      setMessages((prev) => {
         // Check if this is a confirmation of our sent message
         if (message.tempId) {
           // Replace the optimistic message with the real one
-          return prev.map(msg => 
+          return prev.map((msg) =>
             msg.isOptimistic && msg._id === message.tempId
               ? { ...normalizedMessage, status: "delivered" }
               : msg
@@ -177,11 +200,15 @@ export default function ChatApp() {
         }
 
         // Check for duplicates
-        const isDuplicate = prev.some(msg => 
-          msg._id === normalizedMessage._id ||
-          (msg.text === normalizedMessage.text &&
-           msg.senderId === normalizedMessage.senderId &&
-           Math.abs(new Date(`1970-01-01 ${msg.time}`) - new Date(`1970-01-01 ${normalizedMessage.time}`)) < 60000) 
+        const isDuplicate = prev.some(
+          (msg) =>
+            msg._id === normalizedMessage._id ||
+            (msg.text === normalizedMessage.text &&
+              msg.senderId === normalizedMessage.senderId &&
+              Math.abs(
+                new Date(`1970-01-01 ${msg.time}`) -
+                  new Date(`1970-01-01 ${normalizedMessage.time}`)
+              ) < 60000)
         );
 
         if (isDuplicate) {
@@ -194,11 +221,9 @@ export default function ChatApp() {
 
     const handleMessageStatus = (data) => {
       // Handle message status updates (delivered, seen, etc.)
-      setMessages(prev =>
-        prev.map(msg =>
-          msg._id === data.messageId
-            ? { ...msg, status: data.status }
-            : msg
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === data.messageId ? { ...msg, status: data.status } : msg
         )
       );
     };
@@ -237,43 +262,43 @@ export default function ChatApp() {
       >
         {/* Header */}
         <div className="p-4 border-b border-base-300">
-  <div className="flex items-center gap-3"
-  onClick={()=>navigate('/profile')}
-  >
-    {/* Avatar */}
-    <div className="avatar">
-      <div className="w-10 rounded-full">
-        <img
-          src="https://api.dicebear.com/9.x/bottts/svg"
-          alt="My Avatar"
-        />
-      </div>
-    </div>
+          <div
+            className="flex items-center gap-3"
+            onClick={() => navigate("/profile")}
+          >
+            {/* Avatar */}
+            <div className="avatar">
+              <div className="w-10 rounded-full">
+                <img
+                  src="https://api.dicebear.com/9.x/bottts/svg"
+                  alt="My Avatar"
+                />
+              </div>
+            </div>
 
-    {/* Username and status */}
-    <div>
-      <h2 className="text-lg font-semibold text-base-content">
-        {loggedInUser?.toUpperCase()}
-      </h2>
-      <p className="text-sm text-base-content/60">Online</p>
-    </div>
+            {/* Username and status */}
+            <div>
+              <h2 className="text-lg font-semibold text-base-content cursor-pointer">
+                {loggedInUser?.toUpperCase()}
+              </h2>
+              <p className="text-sm text-base-content/60">Online</p>
+            </div>
 
-    {/* Logout button aligned right */}
-    <button
-      onClick={() => {
-        logout();
-        sessionStorage.clear();
-        window.location.href = "/";
-        navigate("/")
-      }}
-       className="btn btn-warning  btn-sm ml-auto"
-      title="Logout"
-    >
-      Logout
-    </button>
-  </div>
-</div>
-
+            {/* Logout button aligned right */}
+            <button
+              onClick={() => {
+                logout();
+                sessionStorage.clear();
+                window.location.href = "/";
+                navigate("/");
+              }}
+              className="btn btn-warning  btn-sm ml-auto"
+              title="Logout"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
 
         {/* Search */}
         <div className="p-4">
@@ -412,7 +437,6 @@ export default function ChatApp() {
                   />
                 </svg>
               </button>
-              
             </div>
           </div>
         </div>

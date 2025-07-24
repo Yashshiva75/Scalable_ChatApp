@@ -30,14 +30,12 @@ export default function AuthUI() {
   const handleLogin = async () => {
     try {
       const apiCall = activeTab === 'register' ? authApi.register(formData) : authApi.login(formData);
-
       const response = await apiCall;
       
       if(response.token){
         navigate('/chat')
         sessionStorage.setItem('token', response.token);
         sessionStorage.setItem("user", JSON.stringify(response.user));
-
       }
       showSuccessToast('Logged In')
       dispatch(setUser({user:response.user,token:response.token}))
