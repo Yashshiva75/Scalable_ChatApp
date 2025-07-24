@@ -136,12 +136,12 @@ export const getOtherUsers = async (req, res) => {
 export const editUserProfile = async(req,res)=>{
   try{
       const userId = req.user;
-      const {userName,profilePhoto} = req.body;
-      console.log('userName',userName,'userId',userId)
+      const {userName,profilePicture} = req.body;
+      
 
       const updatedUser = await User.findByIdAndUpdate(userId,{
         userName:userName,
-        profilePhoto:profilePhoto
+        profilePhoto:profilePicture
       },
     {new:true}
     )

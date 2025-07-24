@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
-import { Camera, Edit3, Heart, MessageCircle, Users, Check, X } from 'lucide-react';
+import { Camera, Edit3, Heart, MessageCircle, Users, Check, X, Loader2 } from 'lucide-react';
 import { MoveLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { userAPI } from '../Apis/userAPI';
 import { useQuery } from '@tanstack/react-query';
 import { setUser } from '../Store/userSlice';
+import { showSuccessToast, showErrorToast } from "../utils/toasts/ReactToast";
 
 const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false); // Add loading state
   const dispatch = useDispatch()
 
   const navigate = useNavigate()
   const loggedInUser = useSelector((state)=>state.user.user)
-
-  console.log('user hu',loggedInUser)
 
   const [profile, setProfile] = useState({
     userName: loggedInUser?.userName?.toUpperCase(),
@@ -23,6 +23,7 @@ const ProfilePage = () => {
     joinDate: 'March 2024',
   });
 
+  
   const [editProfile, setEditProfile] = useState({ ...profile });
 
   const handleEdit = () => {
@@ -31,12 +32,28 @@ const ProfilePage = () => {
   };
 
   const handleSave = async() => {
-    setProfile({ ...editProfile });
-    const updatedUser =await updateprofile(editProfile)
-    console.log('updated user come successfully',updatedUser)
-    dispatch(setUser({user:updatedUser?.user?.userName}))
-    sessionStorage.setItem("user", JSON.stringify(updatedUser.user));
-    setIsEditing(false);
+    setIsUpdating(true); // Start loading
+    
+    try {
+      setProfile({ ...editProfile });
+      const updatedUser = await updateprofile(editProfile);
+      
+      if (updatedUser && updatedUser.user) {
+        dispatch(setUser({user: updatedUser?.user}));
+        sessionStorage.setItem("user", JSON.stringify(updatedUser?.user));
+        setIsEditing(false);
+        showSuccessToast('Profile updated successfully!');
+      } else {
+        throw new Error('Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      showErrorToast('Failed to update profile. Please try again.');
+      // Revert changes on error
+      setEditProfile({ ...profile });
+    } finally {
+      setIsUpdating(false); // Stop loading
+    }
   };
 
   const handleCancel = () => {
@@ -68,13 +85,13 @@ const ProfilePage = () => {
     "Custom status..."
   ];
 
-  const updateprofile = async(data)=>{
-    try{
-      const updateduser = await userAPI.updateProfile(data)
-      
-      return updateduser
-    }catch(error){
-      console.log('Error in updating',error)
+  const updateprofile = async(data) => {
+    try {
+      const updateduser = await userAPI.updateProfile(data);
+      return updateduser;
+    } catch (error) {
+      console.log('Error in updating', error);
+      throw error; // Re-throw to handle in handleSave
     }
   }
 
@@ -83,16 +100,20 @@ const ProfilePage = () => {
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <button className='btn btn-outline btn-info bg-slate-800 border-slate-600 text-cyan-400 hover:bg-slate-700 hover:border-cyan-400'
-          onClick={()=>navigate('/chat')}
+          <button 
+            className='btn btn-outline btn-info bg-slate-800 border-slate-600 text-cyan-400 hover:bg-slate-700 hover:border-cyan-400'
+            onClick={() => navigate('/chat')}
+            disabled={isUpdating} // Disable navigation during update
           >
             <MoveLeft />
-            Back</button>
+            Back
+          </button>
           <h1 className="text-2xl font-bold text-white">My Profile</h1>
           {!isEditing ? (
             <button
               onClick={handleEdit}
               className="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-600 hover:bg-slate-700"
+              disabled={isUpdating}
             >
               <Edit3 size={16} className="text-cyan-400" />
               <span className="text-sm font-medium text-gray-200">Edit</span>
@@ -101,14 +122,25 @@ const ProfilePage = () => {
             <div className="flex gap-2">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-1 bg-green-600 px-3 py-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 text-white hover:bg-green-500"
+                className="flex items-center gap-1 bg-green-600 px-3 py-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isUpdating}
               >
-                <Check size={14} />
-                <span className="text-sm font-medium">Save</span>
+                {isUpdating ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span className="text-sm font-medium">Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    <span className="text-sm font-medium">Save</span>
+                  </>
+                )}
               </button>
               <button
                 onClick={handleCancel}
-                className="flex items-center gap-1 bg-slate-600 px-3 py-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 text-white hover:bg-slate-500"
+                className="flex items-center gap-1 bg-slate-600 px-3 py-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 text-white hover:bg-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isUpdating}
               >
                 <X size={14} />
                 <span className="text-sm font-medium">Cancel</span>
@@ -117,8 +149,19 @@ const ProfilePage = () => {
           )}
         </div>
 
+        {/* Loading Overlay */}
+        {isUpdating && (
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-2xl p-6 flex flex-col items-center gap-4 border border-slate-700">
+              <Loader2 size={32} className="animate-spin text-cyan-400" />
+              <p className="text-white font-medium">Updating Profile...</p>
+              <p className="text-gray-400 text-sm">Please wait</p>
+            </div>
+          </div>
+        )}
+
         {/* Profile Card */}
-        <div className="bg-slate-800 rounded-3xl shadow-2xl p-8 mb-6 border border-slate-700 backdrop-blur-sm">
+        <div className={`bg-slate-800 rounded-3xl shadow-2xl p-8 mb-6 border border-slate-700 backdrop-blur-sm ${isUpdating ? '' : ''}`}>
           {/* Profile Picture */}
           <div className="flex flex-col items-center mb-6">
             <div className="relative group">
@@ -135,13 +178,14 @@ const ProfilePage = () => {
                   </span>
                 )}
               </div>
-              <label className="absolute bottom-0 right-0 bg-slate-700 rounded-full p-2 shadow-lg cursor-pointer hover:bg-slate-600 transition-colors duration-200 border border-slate-600">
+              <label className={`absolute bottom-0 right-0 bg-slate-700 rounded-full p-2 shadow-lg cursor-pointer hover:bg-slate-600 transition-colors duration-200 border border-slate-600 ${isUpdating ? 'pointer-events-none opacity-50' : ''}`}>
                 <Camera size={16} className="text-cyan-400" />
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
                   className="hidden"
+                  disabled={isUpdating}
                 />
               </label>
             </div>
@@ -157,8 +201,9 @@ const ProfilePage = () => {
                   type="text"
                   value={editProfile.userName}
                   onChange={(e) => setEditProfile({ ...editProfile, userName: e.target.value })}
-                  className="w-full px-4 py-3 border text-gray-200 bg-slate-700 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                  className="w-full px-4 py-3 border text-gray-200 bg-slate-700 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Enter your name"
+                  disabled={isUpdating}
                 />
               ) : (
                 <div className="text-xl font-semibold text-white px-4 py-3 bg-slate-700 rounded-2xl border border-slate-600">
@@ -175,10 +220,11 @@ const ProfilePage = () => {
                   type="number"
                   value={editProfile.age}
                   onChange={(e) => setEditProfile({ ...editProfile, age: e.target.value })}
-                  className="w-full px-4 py-3 border text-gray-200 bg-slate-700 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                  className="w-full px-4 py-3 border text-gray-200 bg-slate-700 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Enter your age"
                   min="13"
                   max="100"
+                  disabled={isUpdating}
                 />
               ) : (
                 <div className="text-lg text-gray-200 px-4 py-3 bg-slate-700 rounded-2xl border border-slate-600">
@@ -195,7 +241,8 @@ const ProfilePage = () => {
                   <select
                     value={editProfile.status}
                     onChange={(e) => setEditProfile({ ...editProfile, status: e.target.value })}
-                    className="w-full px-4 py-3 border text-gray-200 bg-slate-700 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-3 border text-gray-200 bg-slate-700 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isUpdating}
                   >
                     {statusOptions.map((option, index) => (
                       <option key={index} value={option} className="bg-slate-700 text-gray-200">
@@ -209,7 +256,8 @@ const ProfilePage = () => {
                       value={editProfile.customStatus || ''}
                       onChange={(e) => setEditProfile({ ...editProfile, status: e.target.value })}
                       placeholder="Enter your custom status"
-                      className="w-full px-4 py-3 text-gray-200 bg-slate-700 border border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                      className="w-full px-4 py-3 text-gray-200 bg-slate-700 border border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={isUpdating}
                     />
                   )}
                 </div>
