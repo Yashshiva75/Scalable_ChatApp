@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Camera, Edit3, Heart, MessageCircle, Users, Check, X, Loader2 } from 'lucide-react';
+import { Camera, Edit3, Check, X, Loader2 } from 'lucide-react';
 import { MoveLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { userAPI } from '../Apis/userAPI';
-import { useQuery } from '@tanstack/react-query';
 import { setUser } from '../Store/userSlice';
 import { showSuccessToast, showErrorToast } from "../utils/toasts/ReactToast";
 
@@ -13,7 +12,7 @@ const ProfilePage = () => {
   const [isUpdating, setIsUpdating] = useState(false); // Add loading state
   const dispatch = useDispatch()
 
-  const navigate = useNavigate()
+  const navigate = useNavigate() 
   const loggedInUser = useSelector((state)=>state.user.user)
 
   const [profile, setProfile] = useState({
