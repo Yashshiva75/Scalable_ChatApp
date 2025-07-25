@@ -10,7 +10,7 @@ import { initSocket } from './socketServer/socketServer.js'
 dotenv.config()
 
 const app = express()
-const server = http.createServer(app); // Create server for both HTTP & socket
+const server = http.createServer(app); 
 
 app.use(express.json(
     {limit:'50mb'}

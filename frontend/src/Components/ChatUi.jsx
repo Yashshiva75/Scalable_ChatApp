@@ -53,24 +53,37 @@ export default function ChatApp() {
   });
 
   const conversation = convo;
+  console.log('Convoooo',convo)
+
+  
   // Function to normalize message format
   const normalizeMessage = (message, source = "api") => {
-    return {
-      _id: message._id || message.id || `temp-${Date.now()}-${Math.random()}`,
-      text: message.text || message.message || message.content,
-      sender: message.senderId === me ? "me" : "other",
-      senderId: message.senderId,
-      receiverId: message.receiverId,
-      time:
-        message.time ||
-        new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      status: message.status || "delivered",
-      source: source, // Track where the message came from
-    };
+  // Format time helper function
+  const formatMessageTime = (timestamp) => {
+    if (!timestamp) return new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    
+    return new Date(timestamp).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
+
+  return {
+    _id: message._id || message.id || `temp-${Date.now()}-${Math.random()}`,
+    text: message.text || message.message || message.content,
+    sender: message.senderId === me ? "me" : "other",
+    senderId: message.senderId,
+    receiverId: message.receiverId,
+    // FIX: Use individual message's createdAt, not the first message
+    time: formatMessageTime(message.createdAt || message.time),
+    status: message.status || "delivered",
+    source: source, // Track where the message came from
+  };
+};
+
 
   // Function to scroll to bottom
   const scrollToBottom = () => {
@@ -94,17 +107,6 @@ export default function ChatApp() {
     }
   }, [conversation, selectedUser, me]);
 
-  console.log("yyyy", messages);
-
-//   useEffect(() => {
-//   // Auto-select first user when users data loads and no user is currently selected
-//   if (data?.users?.length > 0 && !selectedUser) {
-//     setActiveUser(0);
-//     setselectedUser(data.users[0]._id);
-//     setShowChat(true); // Show chat on desktop
-//   }
-// }, [data?.users, selectedUser]);
-
   const {
     mutate: sendMessage,
     isLoading: messageLoading,
@@ -113,8 +115,6 @@ export default function ChatApp() {
     mutationFn: chatAPI.sendMessage,
     onSuccess: (data) => {
       console.log("Message sent successfully", data);
-      // Don't invalidate queries immediately, let the socket handle real-time updates
-      // queryClient.invalidateQueries(['messages', selectedUser]);
     },
     onError: (error) => {
       console.log("Message send error", error);
@@ -123,9 +123,8 @@ export default function ChatApp() {
     },
   });
 
-  const userString = sessionStorage.getItem("user"); // yeh ek JSON string hai
+  const userString = sessionStorage.getItem("user"); 
   const user = userString ? JSON.parse(userString) : null;
-  console.log('this is currecnt',user)
   const loggedInUser = user?.userName;
 
   const { mutate: logout, isLoading: LoggingOut } = useMutation({
