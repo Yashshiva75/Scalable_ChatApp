@@ -134,11 +134,12 @@ export const getOtherUsers = async (req, res) => {
 
 //Edit profile
 export const editUserProfile = async(req,res)=>{
+  console.log('object',req.file)
   try{
       const userId = req.user;
-      const {userName,profilePicture} = req.body;
+      const {userName} = req.body;
+      const profilePicture = req.file?.path; // Cloudinary gives file URL in `path`
       
-
       const updatedUser = await User.findByIdAndUpdate(userId,{
         userName:userName,
         profilePhoto:profilePicture

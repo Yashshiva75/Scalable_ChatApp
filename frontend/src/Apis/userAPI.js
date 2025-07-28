@@ -8,9 +8,9 @@ export const userAPI = {
   },
 
   // Update user profile
-  updateProfile: async (userData) => {
-    return await apiClient.put(ENDPOINTS.UPDATE_PROFILE, userData);
-  },
+  // updateProfile: async (userData) => {
+  //   return await apiClient.put(ENDPOINTS.UPDATE_PROFILE, userData);
+  // },
 
   // Get all users
   getAllUsers: async () => {
