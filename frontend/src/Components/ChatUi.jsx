@@ -11,7 +11,7 @@ import { useSocket } from "../SocketClient/SocketContext/SocketContext";
 import { useSelector } from "react-redux";
 import { authApi } from "../Apis/authApis";
 import { useNavigate } from "react-router-dom";
-
+import bgImage from '../assets/background-cool.webp';
 export default function ChatApp() {
   const [activeUser, setActiveUser] = useState(0);
   const [selectedUser, setselectedUser] = useState("");
@@ -53,7 +53,7 @@ export default function ChatApp() {
   });
 
   const conversation = convo;
-  console.log('Convoooo',convo)
+ 
 
   
   // Function to normalize message format
@@ -126,7 +126,7 @@ export default function ChatApp() {
   const userString = sessionStorage.getItem("user"); 
   const user = userString ? JSON.parse(userString) : null;
   const loggedInUser = user?.userName;
-
+  
   const { mutate: logout, isLoading: LoggingOut } = useMutation({
     mutationFn: authApi.logout,
   });
@@ -269,7 +269,7 @@ export default function ChatApp() {
             <div className="avatar">
               <div className="w-10 rounded-full">
                 <img
-                  src="https://api.dicebear.com/9.x/bottts/svg"
+                  src={user?.profilePhoto}
                   alt="My Avatar"
                 />
               </div>
@@ -280,7 +280,7 @@ export default function ChatApp() {
               <h2 className="text-lg font-semibold text-base-content cursor-pointer">
                 {loggedInUser?.toUpperCase()}
               </h2>
-              <p className="text-sm text-base-content/60">Online</p>
+              <p className="text-sm text-base-content/60">Online 🟢</p>
             </div>
 
             {/* Logout button aligned right */}
@@ -441,7 +441,7 @@ export default function ChatApp() {
         </div>
 
         {/* Messages Container */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2" style={{ backgroundImage: `url(${bgImage})` }}>
           {messages.map((message, index) => (
             <div
               key={message._id || `message-${index}`}

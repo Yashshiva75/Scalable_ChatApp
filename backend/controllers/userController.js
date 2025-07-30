@@ -43,6 +43,12 @@ export const register = async (req, res) => {
     //Generate JWT token
     const token = generateToken(newUser._id);
 
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    
     return res.status(200).json({
       message: "User registered successfully",
       token,
@@ -72,7 +78,7 @@ export const Login = async (req, res) => {
     }
 
     const user = await User.findOne({ userName });
-
+    console.log('user come',user)
     if (!user) {
       return res.status(404).json({ message: "user not found please sign in" });
     }
