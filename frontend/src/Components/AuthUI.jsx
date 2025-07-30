@@ -49,6 +49,9 @@ export default function AuthUI() {
   };
 
 
+  //Session storage items mapper
+
+  
   const handleGoogleLoginSuccess =async (credentialResponse) => {
     try {
       const { credential } = credentialResponse;
@@ -61,19 +64,21 @@ export default function AuthUI() {
       // Decode the JWT token from Google
       const decoded = jwtDecode(credential); 
 
+      const mappedItems = {
+          fullName:decoded.name,
+          userName:decoded.name,
+          profilePhoto:decoded.picture
+       }
       // You can now use `decoded` to get user's email, name, etc.
-      console.log("Decoded Google Data:", decoded);
       const loginWithGoogle = await axios.post("http://localhost:5000/api/loginwithgoogle",decoded,{
         headers:{
           'Content-Type':'application/json'
         },
         withCredentials:true
       })
-      console.log('google logged in success',loginWithGoogle)
-
       dispatch(setUser({ user: decoded, token: credential }));
       sessionStorage.setItem("token", credential);
-      sessionStorage.setItem("user", JSON.stringify(decoded));
+      sessionStorage.setItem("user", JSON.stringify(mappedItems));
       showSuccessToast("Logged in with Google");
       navigate("/chat");
     } catch (err) {
