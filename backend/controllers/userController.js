@@ -43,6 +43,12 @@ export const register = async (req, res) => {
     //Generate JWT token
     const token = generateToken(newUser._id);
 
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    
     return res.status(200).json({
       message: "User registered successfully",
       token,
@@ -72,7 +78,7 @@ export const Login = async (req, res) => {
     }
 
     const user = await User.findOne({ userName });
-
+    console.log('user come',user)
     if (!user) {
       return res.status(404).json({ message: "user not found please sign in" });
     }
@@ -134,7 +140,7 @@ export const getOtherUsers = async (req, res) => {
 
 //Edit profile
 export const editUserProfile = async(req,res)=>{
-  console.log('object',req.file)
+  
   try{
       const userId = req.user;
       const {userName} = req.body;
@@ -159,3 +165,60 @@ export const editUserProfile = async(req,res)=>{
 
   }
 }
+
+//Login wid google
+export const registerWithGoogle = async (req, res) => {
+  try {
+    const { name,picture,sub } = req.body;
+      console.log('this are coming',name,picture)
+    if (!name || !sub || !picture) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Check if user already exists with same googleId or userName
+    let existingUser = await User.findOne({ googleId:sub });
+
+    if (!existingUser) {
+      existingUser = await User.findOne({ userName:name });
+    }
+
+    if (existingUser) {
+      // If user already exists, return token directly
+      const token = generateToken(existingUser._id);
+      return res.status(200).json({
+        message: "User already exists, logged in",
+        token,
+        user: {
+          id: existingUser._id,
+          fullName: existingUser.fullName,
+          userName: existingUser.userName,
+          profilePhoto: existingUser.profilePhoto,
+        },
+      });
+    }
+
+    // Create new user
+    const newUser = await User.create({
+      fullName:name,
+      userName:name,
+      profilePhoto:picture,
+      googleId:sub,
+    });
+
+    const token = generateToken(newUser._id);
+
+    return res.status(201).json({
+      message: "User registered via Google",
+      token,
+      user: {
+        id: newUser._id,
+        fullName: newUser.fullName,
+        userName: newUser.userName,
+        profilePhoto: newUser.profilePhoto,
+      },
+    });
+  } catch (error) {
+    console.error("Google register error:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
