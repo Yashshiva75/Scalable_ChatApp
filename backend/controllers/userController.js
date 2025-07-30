@@ -170,7 +170,6 @@ export const editUserProfile = async(req,res)=>{
 export const registerWithGoogle = async (req, res) => {
   try {
     const { name,picture,sub } = req.body;
-      console.log('this are coming',name,picture)
     if (!name || !sub || !picture) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -185,6 +184,13 @@ export const registerWithGoogle = async (req, res) => {
     if (existingUser) {
       // If user already exists, return token directly
       const token = generateToken(existingUser._id);
+
+      res.cookie("jwt", token, {
+      httpOnly: true,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
       return res.status(200).json({
         message: "User already exists, logged in",
         token,
@@ -206,6 +212,12 @@ export const registerWithGoogle = async (req, res) => {
     });
 
     const token = generateToken(newUser._id);
+
+     res.cookie("jwt", token, {
+      httpOnly: true,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     return res.status(201).json({
       message: "User registered via Google",

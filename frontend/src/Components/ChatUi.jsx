@@ -12,6 +12,7 @@ import { useSelector } from "react-redux";
 import { authApi } from "../Apis/authApis";
 import { useNavigate } from "react-router-dom";
 import bgImage from '../assets/background-cool.webp';
+
 export default function ChatApp() {
   const [activeUser, setActiveUser] = useState(0);
   const [selectedUser, setselectedUser] = useState("");
