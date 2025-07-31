@@ -314,7 +314,7 @@ export default function ChatApp() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search conversations..."
-          className="input input-sm w-full bg-base-300 border-base-300 focus:border-primary"
+          className="input input-sm w-full bg-base-300 border-base-300 outline-none focus:outline-none"
         />
         </div>
 
