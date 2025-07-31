@@ -76,7 +76,7 @@ export default function AuthUI() {
         },
         withCredentials:true
       })
-      dispatch(setUser({ user: decoded, token: credential }));
+      dispatch(setUser({ user: mappedItems, token: credential }));
       sessionStorage.setItem("token", credential);
       sessionStorage.setItem("user", JSON.stringify(mappedItems));
       showSuccessToast("Logged in with Google");

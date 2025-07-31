@@ -19,6 +19,8 @@ export default function ChatApp() {
   const [newMessage, setNewMessage] = useState("");
   const [showChat, setShowChat] = useState(false);
   const socket = useSocket();
+  const [searchQuery, setSearchQuery] = useState("");
+
   const me = useSelector((state) => state.user.user?.id);
   const queryClient = useQueryClient();
 
@@ -35,11 +37,11 @@ export default function ChatApp() {
 
   // Modified click handler to toggle chat on mobile
   const handleUserClick = (index) => {
-    setActiveUser(index);
-    const selected = data?.users?.[index];
-    setselectedUser(selected?._id);
-    setShowChat(true);
-  };
+  setActiveUser(index);
+  const selected = filteredUsers[index]; 
+  setselectedUser(selected?._id);
+  setShowChat(true);
+};
 
   // Messaging Api
   const {
@@ -56,6 +58,11 @@ export default function ChatApp() {
   const conversation = convo;
  
 
+  // Add this filtered users function before the return statement
+  const filteredUsers = data?.users?.filter(user => 
+    user.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
   
   // Function to normalize message format
   const normalizeMessage = (message, source = "api") => {
@@ -261,7 +268,7 @@ export default function ChatApp() {
         }`}
       >
         {/* Header */}
-        <div className="p-4 border-b border-base-300">
+        <div className="p-4 border-b border-base-300 flex">
           <div
             className="flex items-center gap-3"
             onClick={() => navigate("/profile")}
@@ -285,6 +292,7 @@ export default function ChatApp() {
             </div>
 
             {/* Logout button aligned right */}
+          </div>
             <button
               onClick={() => {
                 logout();
@@ -297,72 +305,82 @@ export default function ChatApp() {
             >
               Logout
             </button>
-          </div>
         </div>
 
         {/* Search */}
         <div className="p-4">
-          <input
-            type="text"
-            placeholder="Search conversations..."
-            className="input input-sm w-full bg-base-300 border-base-300 focus:border-primary"
-          />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search conversations..."
+          className="input input-sm w-full bg-base-300 border-base-300 outline-none focus:outline-none"
+        />
         </div>
 
         {/* Users List */}
         <div className="flex-1 overflow-y-auto pb-4">
-          {isLoading
-            ? Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="p-4 border-b border-base-300">
-                  <div className="flex items-center gap-3">
-                    <div className="skeleton w-12 h-12 rounded-full"></div>
-                    <div className="flex-1">
-                      <div className="skeleton h-4 w-3/4 mb-2"></div>
-                      <div className="skeleton h-3 w-1/2"></div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            : data?.users.map((user, index) => (
-                <div
-                  key={index}
-                  className={`p-4 border-b border-base-300 cursor-pointer transition-all duration-200 hover:bg-base-300 ${
-                    activeUser === index
-                      ? "bg-base-300 border-l-4 border-l-primary"
-                      : ""
-                  }`}
-                  onClick={() => handleUserClick(index)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="avatar">
-                      <div className="w-12 rounded-full relative">
-                        <img src={user?.profilePhoto} alt={user.fullName} />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center">
-                        <h3 className="font-medium text-base-content truncate">
-                          {user.userName}
-                        </h3>
-                        <span className="text-xs text-base-content/60">
-                          04:26
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <p className="text-sm text-base-content/60 truncate">
-                          {user.lastMessage}
-                        </p>
-                        {user.unread > 0 && (
-                          <div className="badge badge-primary badge-sm">
-                            {user.unread}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+  {isLoading
+    ? Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} className="p-4 border-b border-base-300">
+          <div className="flex items-center gap-3">
+            <div className="skeleton w-12 h-12 rounded-full"></div>
+            <div className="flex-1">
+              <div className="skeleton h-4 w-3/4 mb-2"></div>
+              <div className="skeleton h-3 w-1/2"></div>
+            </div>
+          </div>
         </div>
+      ))
+    : filteredUsers.length > 0 ? (
+        filteredUsers.map((user, index) => (
+          <div
+            key={index}
+            className={`p-4 border-b border-base-300 cursor-pointer transition-all duration-200 hover:bg-base-300 ${
+              activeUser === index
+                ? "bg-base-300 border-l-4 border-l-primary"
+                : ""
+            }`}
+            onClick={() => handleUserClick(index)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="avatar">
+                <div className="w-12 rounded-full relative">
+                  <img src={user?.profilePhoto} alt={user.fullName} />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium text-base-content truncate">
+                    {user.userName}
+                  </h3>
+                  <span className="text-xs text-base-content/60">
+                    04:26
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <p className="text-sm text-base-content/60 truncate">
+                    {user.lastMessage}
+                  </p>
+                  {user.unread > 0 && (
+                    <div className="badge badge-primary badge-sm">
+                      {user.unread}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        // Show "No users found" message when search returns empty
+        <div className="p-4 text-center text-base-content/60">
+          <p>No users found matching "{searchQuery}"</p>
+        </div>
+      )
+  }
+        </div>
+
       </div>
 
       {/* Right Side - Chat Interface */}
