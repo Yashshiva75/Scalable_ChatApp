@@ -96,7 +96,7 @@ export const Login = async (req, res) => {
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    console.log('token stored in cookies successfully but still issue)
+    console.log('token stored in cookies successfully but still issue')
     return res.status(200).json({
       message: "Login successfully",
       token,
