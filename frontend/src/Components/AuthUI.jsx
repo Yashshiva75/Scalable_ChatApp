@@ -10,7 +10,8 @@ import axios from "axios";
 export default function AuthUI() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
+  const BASE_API = import.meta.env.VITE_REACT_APP_API_URL;
+  
   const [activeTab, setActiveTab] = useState("login");
   const [formData, setFormData] = useState({
     email: "",
@@ -70,7 +71,7 @@ export default function AuthUI() {
           profilePhoto:decoded.picture
        }
       // You can now use `decoded` to get user's email, name, etc.
-      const loginWithGoogle = await axios.post("http://localhost:5000/api/loginwithgoogle",decoded,{
+      const loginWithGoogle = await axios.post(`${BASE_API}/api/loginwithgoogle`,decoded,{
         headers:{
           'Content-Type':'application/json'
         },

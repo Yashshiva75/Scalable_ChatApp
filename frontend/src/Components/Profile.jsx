@@ -12,6 +12,7 @@ const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false); // Add loading state
   const dispatch = useDispatch();
+  const BASE_API = import.meta.env.VITE_REACT_APP_API_URL;
 
   const navigate = useNavigate();
   const loggedInUser = useSelector((state) => state.user.user);
@@ -143,7 +144,7 @@ const ProfilePage = () => {
   
   try {
   
-    const updateduser = await axios.put('http://localhost:5000/api/updateprofile',data,{
+    const updateduser = await axios.put(`${BASE_API}/api/updateprofile`,data,{
       headers:{
         'Content-Type':'multipart/form-data',
       },
