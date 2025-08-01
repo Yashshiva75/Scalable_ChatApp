@@ -8,7 +8,7 @@ const connectedUsers = {}; // { userId: socket.id }
 export const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: "http://localhost:5173",
+      origin: "https://chatflow-gsx8.onrender.com",
       credentials: true
     }
   });
