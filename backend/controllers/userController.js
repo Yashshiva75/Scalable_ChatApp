@@ -45,7 +45,7 @@ export const register = async (req, res) => {
 
     res.cookie("jwt", token, {
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     
@@ -93,7 +93,7 @@ export const Login = async (req, res) => {
 
     res.cookie("jwt", token, {
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     console.log('token stored in cookies successfully but still issue')
@@ -187,7 +187,7 @@ export const registerWithGoogle = async (req, res) => {
 
       res.cookie("jwt", token, {
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -215,7 +215,7 @@ export const registerWithGoogle = async (req, res) => {
 
      res.cookie("jwt", token, {
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
