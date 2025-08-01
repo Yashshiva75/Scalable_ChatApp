@@ -24,7 +24,7 @@ app.use(express.urlencoded({
 app.use(cookieParser());
 
 app.use(cors({
-    origin:"https://chatflow-gsx8.onrender.com/",
+    origin:"https://chatflow-gsx8.onrender.com",
     credentials:true
 }))
 
