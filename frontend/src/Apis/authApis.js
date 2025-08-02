@@ -5,9 +5,9 @@ export const authApi = {
     login : async(credentials)=>{
         const response = await apiClient.post(ENDPOINTS.LOGIN,credentials);
 
-    if (response.token) {
-      sessionStorage.setItem('token', response.token);
-    }
+    // if (response.token) {
+    //   sessionStorage.setItem('token', response.token);
+    // }
     return response;
 
     },
