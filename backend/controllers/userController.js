@@ -43,12 +43,13 @@ export const register = async (req, res) => {
     //Generate JWT token
     const token = generateToken(newUser._id);
 
-    res.cookie("jwt", token, {
+    res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: true, // must be true in production (https)
+      sameSite: "None", // allow cross-site cookie
+      maxAge: 7 * 24 * 60 * 60 * 1000, // example 7 days
     });
-    
+
     return res.status(200).json({
       message: "User registered successfully",
       token,
@@ -61,7 +62,7 @@ export const register = async (req, res) => {
       },
     });
   } catch (error) {
-    console.log('Error in redg',error)
+    console.log("Error in redg", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -78,7 +79,7 @@ export const Login = async (req, res) => {
     }
 
     const user = await User.findOne({ userName });
-    console.log('user come',user)
+    console.log("user come", user);
     if (!user) {
       return res.status(404).json({ message: "user not found please sign in" });
     }
@@ -91,12 +92,14 @@ export const Login = async (req, res) => {
 
     const token = generateToken(user._id);
 
-    res.cookie("jwt", token, {
+    res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: true, // must be true in production (https)
+      sameSite: "None", // allow cross-site cookie
+      maxAge: 7 * 24 * 60 * 60 * 1000, // example 7 days
     });
-    console.log('token stored in cookies successfully but still issue')
+
+    console.log("token stored in cookies successfully but still issue");
     return res.status(200).json({
       message: "Login successfully",
       token,
@@ -114,7 +117,7 @@ export const Login = async (req, res) => {
   }
 };
 
-export const logout = async (req,res) => {
+export const logout = async (req, res) => {
   try {
     res.cookie("jwt", "", { maxAge: 0 });
     return res.status(200).json("logout Successfully");
@@ -124,14 +127,13 @@ export const logout = async (req,res) => {
 };
 
 export const getOtherUsers = async (req, res) => {
-  
   try {
     const LoggedInUser = req.user;
 
     const AllUsers = await User.find({ _id: { $ne: LoggedInUser } }).select(
       "-password"
     );
-    
+
     return res.status(200).json({ users: AllUsers });
   } catch (error) {
     return res.status(500).json("Error in getting users");
@@ -139,57 +141,64 @@ export const getOtherUsers = async (req, res) => {
 };
 
 //Edit profile
-export const editUserProfile = async(req,res)=>{
-  
-  try{
-      const userId = req.user;
-      const {userName} = req.body;
-      const profilePicture = req.file?.path; // Cloudinary gives file URL in `path`
-      
-      const updatedUser = await User.findByIdAndUpdate(userId,{
-        userName:userName,
-        profilePhoto:profilePicture
+export const editUserProfile = async (req, res) => {
+  try {
+    const userId = req.user;
+    const { userName } = req.body;
+    const profilePicture = req.file?.path; // Cloudinary gives file URL in `path`
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        userName: userName,
+        profilePhoto: profilePicture,
       },
-    {new:true}
-    )
+      { new: true }
+    );
 
-    if(!updatedUser){
-      return res.status(404).json({message:'User not found or error in updating'})
+    if (!updatedUser) {
+      return res
+        .status(404)
+        .json({ message: "User not found or error in updating" });
     }
-    console.log('updateduser',updatedUser)
-    return res.status(200).json({user:updatedUser,message:'user details updated successfully'})
-
-  }catch(error){
-    console.log('Error in update profile',error)
-        return res.status(500).json({message:'Error in api'})
-
+    console.log("updateduser", updatedUser);
+    return res
+      .status(200)
+      .json({
+        user: updatedUser,
+        message: "user details updated successfully",
+      });
+  } catch (error) {
+    console.log("Error in update profile", error);
+    return res.status(500).json({ message: "Error in api" });
   }
-}
+};
 
 //Login wid google
 export const registerWithGoogle = async (req, res) => {
   try {
-    const { name,picture,sub } = req.body;
+    const { name, picture, sub } = req.body;
     if (!name || !sub || !picture) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
     // Check if user already exists with same googleId or userName
-    let existingUser = await User.findOne({ googleId:sub });
+    let existingUser = await User.findOne({ googleId: sub });
 
     if (!existingUser) {
-      existingUser = await User.findOne({ userName:name });
+      existingUser = await User.findOne({ userName: name });
     }
 
     if (existingUser) {
       // If user already exists, return token directly
       const token = generateToken(existingUser._id);
 
-      res.cookie("jwt", token, {
-      httpOnly: true,
-      sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: true, // must be true in production (https)
+        sameSite: "None", // allow cross-site cookie
+        maxAge: 7 * 24 * 60 * 60 * 1000, // example 7 days
+      });
 
       return res.status(200).json({
         message: "User already exists, logged in",
@@ -205,18 +214,19 @@ export const registerWithGoogle = async (req, res) => {
 
     // Create new user
     const newUser = await User.create({
-      fullName:name,
-      userName:name,
-      profilePhoto:picture,
-      googleId:sub,
+      fullName: name,
+      userName: name,
+      profilePhoto: picture,
+      googleId: sub,
     });
 
     const token = generateToken(newUser._id);
 
-     res.cookie("jwt", token, {
+    res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: true, // must be true in production (https)
+      sameSite: "None", // allow cross-site cookie
+      maxAge: 7 * 24 * 60 * 60 * 1000, // example 7 days
     });
 
     return res.status(201).json({

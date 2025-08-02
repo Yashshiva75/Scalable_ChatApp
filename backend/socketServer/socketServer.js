@@ -6,12 +6,18 @@ const connectedUsers = {}; // { userId: socket.id }
 
 
 export const initSocket = (server) => {
-  io = new Server(server, {
-    cors: {
-      origin: "https://chatflow-gsx8.onrender.com",
-      credentials: true
-    }
-  });
+  const allowedOrigins = [
+  "http://localhost:5173",
+  "https://chatflow-gsx8.onrender.com"
+];
+
+io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true
+  }
+});
+
 
   io.on('connection', (socket) => {
     console.log('✅ New user connected:', socket.id);
