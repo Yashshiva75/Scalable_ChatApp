@@ -4,7 +4,7 @@ dotenv.config()
 
 export const VerifyUser = async(req,res,next)=>{
     try{
-      const token = req.cookies;
+      const token = req.cookies.token;
       console.log('token in middleware',token)
       if(!token){
         return res.status(404).json('User not verified!')
