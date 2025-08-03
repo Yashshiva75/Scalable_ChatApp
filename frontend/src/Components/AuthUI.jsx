@@ -344,18 +344,19 @@ export default function AuthUI() {
             or continue with
           </div>
 
-          <div className="w-full flex justify-center mt-4">
-            <div className="w-full">
-              <GoogleLogin
-                onSuccess={handleGoogleLoginSuccess}
-                onError={() => showErrorToast("Google Login Failed")}
-                theme="outline"
-                size="large"
-                shape="pill"
-                text="continue_with"
-              />
-            </div>
-          </div>
+          <div className="w-full flex justify-center">
+  <div style={{ width: "100%" }}>
+    <GoogleLogin
+      onSuccess={handleGoogleLoginSuccess}
+      onError={() => showErrorToast("Google Login Failed")}
+      theme="outline"
+      size="large"
+      shape="pill"
+      text="continue_with"
+      width="100%" // This helps, but not always respected, so we use outer div
+    />
+  </div>
+</div>
 
 
           {/* Footer Text */}
