@@ -344,7 +344,7 @@ export default function AuthUI() {
             or continue with
           </div>
 
-          <div className="overflow-hidden rounded-sm shadow-sm w-full">
+          <div className="">
             <GoogleLogin
               onSuccess={handleGoogleLoginSuccess}
               onError={() => showErrorToast("Google Login Failed")}
