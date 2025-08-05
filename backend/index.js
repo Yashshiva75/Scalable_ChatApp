@@ -26,7 +26,10 @@ app.use(cookieParser());
 
 
 app.use(cors({
-    origin:"https://chatflow-gsx8.onrender.com",
+     origin: [
+        "https://chatflow-gsx8.onrender.com", // production
+        "http://localhost:5000"               // development
+    ],
     credentials:true
 }))
 
