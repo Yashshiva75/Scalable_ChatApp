@@ -358,15 +358,23 @@ export default function AuthUI() {
             or continue with
           </div>
 
-            <GoogleLogin
-              onSuccess={handleGoogleLoginSuccess}
-              onError={() => showErrorToast("Google Login Failed")}
-              theme="filled_blue"
-              size="large"
-              shape="pill"
-              text="continue_with"
-              width={buttonWidth}
-            />
+             <div className="flex justify-center">
+      {/* Wrapper to remove outer gap/border */}
+      <div
+        className="inline-block outline-none focus:outline-none p-0 m-0"
+        style={{ width: `${buttonWidth}px` }}
+      >
+        <GoogleLogin
+          onSuccess={handleGoogleLoginSuccess}
+          onError={() => showErrorToast("Google Login Failed")}
+          theme="filled_blue" // no border look
+          size="large"
+          shape="pill"
+          text="continue_with"
+          width={buttonWidth} // must be px (number)
+        />
+      </div>
+    </div>
           
 
           {/* Footer Text */}
