@@ -363,7 +363,7 @@ export default function AuthUI() {
               onError={() => showErrorToast("Google Login Failed")}
               theme="outline"
               size="large"
-              shape="pill"
+              
               text="continue_with"
               width={buttonWidth}
             />
