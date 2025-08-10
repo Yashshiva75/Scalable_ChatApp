@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { authApi } from "../Apis/authApis";
 import { useDispatch } from "react-redux";
 import { setUser } from "../Store/userSlice";
@@ -11,7 +11,7 @@ export default function AuthUI() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const BASE_API = import.meta.env.VITE_REACT_APP_API_URL;
-  
+
   const [activeTab, setActiveTab] = useState("login");
   const [formData, setFormData] = useState({
     email: "",
@@ -49,11 +49,9 @@ export default function AuthUI() {
     }
   };
 
-
   //Session storage items mapper
 
-  
-  const handleGoogleLoginSuccess =async (credentialResponse) => {
+  const handleGoogleLoginSuccess = async (credentialResponse) => {
     try {
       const { credential } = credentialResponse;
 
@@ -63,20 +61,24 @@ export default function AuthUI() {
       }
 
       // Decode the JWT token from Google
-      const decoded = jwtDecode(credential); 
+      const decoded = jwtDecode(credential);
 
       const mappedItems = {
-          fullName:decoded.name,
-          userName:decoded.name,
-          profilePhoto:decoded.picture
-       }
+        fullName: decoded.name,
+        userName: decoded.name,
+        profilePhoto: decoded.picture,
+      };
       // You can now use `decoded` to get user's email, name, etc.
-      const loginWithGoogle = await axios.post(`${BASE_API}/api/loginwithgoogle`,decoded,{
-        headers:{
-          'Content-Type':'application/json'
-        },
-        withCredentials:true
-      })
+      const loginWithGoogle = await axios.post(
+        `${BASE_API}/api/loginwithgoogle`,
+        decoded,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
       dispatch(setUser({ user: mappedItems, token: credential }));
       sessionStorage.setItem("token", credential);
       sessionStorage.setItem("user", JSON.stringify(mappedItems));
@@ -87,7 +89,19 @@ export default function AuthUI() {
       showErrorToast("Google login failed");
     }
   };
+  const [buttonWidth, setButtonWidth] = useState(370);
 
+  useEffect(() => {
+    const updateWidth = () => {
+      const screenWidth = window.innerWidth;
+      const maxWidth = screenWidth - 100; // Account for px-4 (16px each side)
+      setButtonWidth(Math.min(370, maxWidth));
+    };
+
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -345,17 +359,15 @@ export default function AuthUI() {
           </div>
 
           <div className="w-full flex justify-center">
-            <div style={{ width: "100%", maxWidth: "500px" }}>
-              <GoogleLogin
-                onSuccess={handleGoogleLoginSuccess}
-                onError={() => showErrorToast("Google Login Failed")}
-                theme="outline"
-                size="large"
-                shape="pill"
-                text="continue_with"
-                width={550} // ✅ Only number in px allowed
-              />
-            </div>
+            <GoogleLogin
+              onSuccess={handleGoogleLoginSuccess}
+              onError={() => showErrorToast("Google Login Failed")}
+              theme="outline"
+              size="large"
+              shape="pill"
+              text="continue_with"
+              width={buttonWidth}
+            />
           </div>
 
           {/* Footer Text */}
