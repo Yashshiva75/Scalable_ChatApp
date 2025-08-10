@@ -56,7 +56,7 @@ export default function ChatApp() {
   });
 
   const conversation = convo;
- 
+   console.log('con',convo) 
 
   // Add this filtered users function before the return statement
   const filteredUsers = data?.users?.filter(user => 
