@@ -358,7 +358,6 @@ export default function AuthUI() {
             or continue with
           </div>
 
-          <div className="w-full flex justify-center">
             <GoogleLogin
               onSuccess={handleGoogleLoginSuccess}
               onError={() => showErrorToast("Google Login Failed")}
@@ -368,7 +367,7 @@ export default function AuthUI() {
               text="continue_with"
               width={buttonWidth}
             />
-          </div>
+          
 
           {/* Footer Text */}
           <p className="text-center text-sm text-slate-500 mt-6">
