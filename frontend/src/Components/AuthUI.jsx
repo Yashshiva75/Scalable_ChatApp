@@ -361,9 +361,9 @@ export default function AuthUI() {
             <GoogleLogin
               onSuccess={handleGoogleLoginSuccess}
               onError={() => showErrorToast("Google Login Failed")}
-              theme="outline"
+              theme="filled_blue"
               size="large"
-              
+              shape="pill"
               text="continue_with"
               width={buttonWidth}
             />
