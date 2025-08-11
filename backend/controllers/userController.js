@@ -219,7 +219,7 @@ export const registerWithGoogle = async (req, res) => {
       fullName: name,
       userName: name,
       profilePhoto: picture,
-      googleId: sub,
+      googleId: id,
     });
 
     const token = generateToken(newUser._id);
