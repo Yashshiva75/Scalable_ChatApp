@@ -170,12 +170,12 @@ export const editUserProfile = async(req,res)=>{
 export const registerWithGoogle = async (req, res) => {
   try {
     const { name,picture,sub } = req.body;
-    if (!name || !sub || !picture) {
+    if (!name || !id || !picture) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
     // Check if user already exists with same googleId or userName
-    let existingUser = await User.findOne({ googleId:sub });
+    let existingUser = await User.findOne({ googleId:id });
 
     if (!existingUser) {
       existingUser = await User.findOne({ userName:name });
@@ -208,7 +208,7 @@ export const registerWithGoogle = async (req, res) => {
       fullName:name,
       userName:name,
       profilePhoto:picture,
-      googleId:sub,
+      googleId:id,
     });
 
     const token = generateToken(newUser._id);
