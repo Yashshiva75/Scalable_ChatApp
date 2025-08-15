@@ -22,6 +22,8 @@ export default function ChatApp() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const me = useSelector((state) => state.user.user?.id);
+  
+
   const queryClient = useQueryClient();
 
   const messagesEndRef = useRef(null);
@@ -103,17 +105,7 @@ export default function ChatApp() {
     scrollToBottom();
   }, [messages]);
 
-  // Load messages from API when conversation 
-  useEffect(() => {
-    if (conversation?.data && Array.isArray(conversation.data)) {
-      const normalizedMessages = conversation.data
-        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-        .map((msg) => normalizeMessage(msg, "api"));
-      setMessages(normalizedMessages);
-    } else if (selectedUser) {
-      setMessages([]);
-    }
-  }, [conversation, selectedUser, me]);
+
 
   const {
     mutate: sendMessage,
@@ -193,6 +185,7 @@ export default function ChatApp() {
     if (!socket) return;
 
     const handleReceiveMessage = (message) => {
+      console.log('Messages from socket',message)
       const normalizedMessage = normalizeMessage(message, "socket");
 
       setMessages((prev) => {
@@ -463,9 +456,9 @@ export default function ChatApp() {
         <div className="flex-1 overflow-y-auto p-4 space-y-2" style={{ backgroundImage: `url(${bgImage})` }}>
           {messages.map((message, index) => (
             <div
-              key={message._id || `message-${index}`}
+              key={message?._id || `message-${index}`}
               className={`chat ${
-                message.sender === "me" ? "chat-end" : "chat-start"
+                message?.sender === "me" ? "chat-end" : "chat-start"
               }`}
             >
               <div className="chat-image avatar">
@@ -473,17 +466,17 @@ export default function ChatApp() {
               </div>
               <div className="chat-header">
                 <span className="text-xs text-base-content/60">
-                  {message.time}
+                  {message?.time || '00:00'}
                 </span>
               </div>
               <div
                 className={`chat-bubble text-sm max-w-xs ${
-                  message.sender === "me"
+                  message?.sender === "me"
                     ? "chat-bubble-primary"
                     : "chat-bubble-secondary"
-                } ${message.isOptimistic ? "opacity-70" : ""}`}
+                } ${message?.isOptimistic ? "opacity-70" : ""}`}
               >
-                {message.text}
+                {message?.text}
               </div>
               {message.sender === "me" && !message.isOptimistic && (
                 <div className="chat-footer opacity-50 flex items-center gap-1">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { authApi } from "../Apis/authApis";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../Store/userSlice";
 import { showSuccessToast, showErrorToast } from "../utils/toasts/ReactToast";
 import { useNavigate } from "react-router-dom";
@@ -62,6 +62,7 @@ export default function AuthUI() {
         console.log("Backend response:", loginWithGoogle.data);
         
         const mappedItems = {
+          id:loginWithGoogle?.data?.user.id,
           fullName: userInfo.name,
           userName: userInfo.name,
           profilePhoto: userInfo.picture,
@@ -92,7 +93,7 @@ export default function AuthUI() {
           ? authApi.register(formData)
           : authApi.login(formData);
       const response = await apiCall;
-
+      console.log('logged in user',response)
       if (response.token) {
         navigate("/chat");
         sessionStorage.setItem("token", response.token);

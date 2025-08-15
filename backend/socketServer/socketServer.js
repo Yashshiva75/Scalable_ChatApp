@@ -40,6 +40,7 @@ io = new Server(server, {
 
       console.log('📩 Sending message to:', receiverId);
       io.to(receiverId).emit('receiveMessage', formattedMessage);
+      console.log('Sent message',formattedMessage)
     }); 
 
     socket.on('disconnect', () => {

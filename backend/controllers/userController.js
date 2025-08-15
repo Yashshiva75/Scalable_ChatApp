@@ -179,7 +179,7 @@ export const registerWithGoogle = async (req, res) => {
   try {
     const { name, picture, id } = req.body;
 
-    console.log('object in ggl',req.body)
+   
     if (!name || !id || !picture) {
       return res.status(400).json({ message: "All fields are required" });
     }
