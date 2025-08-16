@@ -20,10 +20,9 @@ export default function ChatApp() {
   const [showChat, setShowChat] = useState(false);
   const socket = useSocket();
   const [searchQuery, setSearchQuery] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const me = useSelector((state) => state.user.user?.id);
-  
-
   const queryClient = useQueryClient();
 
   const messagesEndRef = useRef(null);
@@ -39,11 +38,18 @@ export default function ChatApp() {
 
   // Modified click handler to toggle chat on mobile
   const handleUserClick = (index) => {
-  setActiveUser(index);
-  const selected = filteredUsers[index]; 
-  setselectedUser(selected?._id);
-  setShowChat(true);
-};
+    const selected = filteredUsers[index];
+    if (selected) {
+      // Find the actual index in the original data array
+      const actualIndex = data?.users?.findIndex(user => user._id === selected._id) || 0;
+      setActiveUser(actualIndex);
+      setselectedUser(selected._id);
+      setShowChat(true);
+      
+      // Clear messages when switching users to avoid showing old messages
+      setMessages([]);
+    }
+  };
 
   // Messaging Api
   const {
@@ -58,7 +64,6 @@ export default function ChatApp() {
   });
 
   const conversation = convo;
-   console.log('con',convo) 
 
   // Add this filtered users function before the return statement
   const filteredUsers = data?.users?.filter(user => 
@@ -66,34 +71,61 @@ export default function ChatApp() {
     user.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
   
-  // Function to normalize message format
+  // Enhanced normalizeMessage function with better timestamp handling
   const normalizeMessage = (message, source = "api") => {
-  // Format time helper function
-  const formatMessageTime = (timestamp) => {
-    if (!timestamp) return new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+    // Enhanced time helper function
+    const formatMessageTime = (timestamp) => {
+      // Handle different timestamp formats
+      let date;
+      
+      if (!timestamp) {
+        date = new Date();
+      } else if (typeof timestamp === 'string') {
+        date = new Date(timestamp);
+      } else if (typeof timestamp === 'number') {
+        // Handle Unix timestamps (both seconds and milliseconds)
+        date = timestamp.toString().length === 10 
+          ? new Date(timestamp * 1000) 
+          : new Date(timestamp);
+      } else {
+        date = new Date(timestamp);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid timestamp received:', timestamp);
+        date = new Date(); // Fallback to current time
+      }
+      
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
 
-  return {
-    _id: message._id || message.id || `temp-${Date.now()}-${Math.random()}`,
-    text: message.text || message.message || message.content,
-    sender: message.senderId === me ? "me" : "other",
-    senderId: message.senderId,
-    receiverId: message.receiverId,
-    // FIX: Use individual message's createdAt, not the first message
-    time: formatMessageTime(message.createdAt || message.time),
-    status: message.status || "delivered",
-    source: source, // Track where the message came from
-  };
-};
+    // Try multiple timestamp properties based on source
+    let timestamp;
+    if (source === "socket") {
+      // Socket messages might have different property names
+      timestamp = message.timestamp || message.createdAt || message.time || message.sentAt;
+    } else {
+      // API messages
+      timestamp = message.createdAt || message.timestamp || message.time;
+    }
 
+    return {
+      _id: message._id || message.id || `temp-${Date.now()}-${Math.random()}`,
+      text: message.text || message.message || message.content,
+      sender: message.senderId === me ? "me" : "other",
+      senderId: message.senderId,
+      receiverId: message.receiverId,
+      time: formatMessageTime(timestamp),
+      status: message.status || "delivered",
+      source: source,
+      // Keep original timestamp for debugging
+      originalTimestamp: timestamp,
+    };
+  };
 
   // Function to scroll to bottom
   const scrollToBottom = () => {
@@ -105,7 +137,18 @@ export default function ChatApp() {
     scrollToBottom();
   }, [messages]);
 
-
+  // Load messages from API when conversation changes
+  useEffect(() => {
+    if (conversation?.data && Array.isArray(conversation.data)) {
+      console.log('Loading messages from API:', conversation.data);
+      const normalizedMessages = conversation.data
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+        .map((msg) => normalizeMessage(msg, "api"));
+      setMessages(normalizedMessages);
+    } else if (selectedUser) {
+      setMessages([]);
+    }
+  }, [conversation, selectedUser, me]);
 
   const {
     mutate: sendMessage,
@@ -133,11 +176,13 @@ export default function ChatApp() {
 
   const navigate = useNavigate();
 
+  // Updated handleSendMessage with proper timestamp
   const handleSendMessage = (e) => {
     if (e) e.preventDefault();
     if (newMessage.trim() && selectedUser) {
       const tempId = `temp-${Date.now()}-${Math.random()}`;
-      const currentTime = new Date().toLocaleTimeString([], {
+      const now = new Date();
+      const currentTime = now.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       });
@@ -164,12 +209,12 @@ export default function ChatApp() {
         message: newMessage,
       };
 
-      // Emit to socket
+      // Emit to socket with ISO timestamp
       socket.emit("sendMessage", {
         ...messagePayload,
         senderId: me,
-        time: currentTime,
-        tempId: tempId, // Send temp ID to match with response
+        timestamp: now.toISOString(), // Send ISO timestamp
+        tempId: tempId,
       });
 
       // Clear input
@@ -180,18 +225,19 @@ export default function ChatApp() {
     }
   };
 
-  // Socket message handling
+  // Updated socket message handling
   useEffect(() => {
     if (!socket) return;
 
     const handleReceiveMessage = (message) => {
-      console.log('Messages from socket',message)
+      console.log('Raw socket message:', message); // Debug log
+      
       const normalizedMessage = normalizeMessage(message, "socket");
+      console.log('Normalized socket message:', normalizedMessage); // Debug log
 
       setMessages((prev) => {
         // Check if this is a confirmation of our sent message
         if (message.tempId) {
-          // Replace the optimistic message with the real one
           return prev.map((msg) =>
             msg.isOptimistic && msg._id === message.tempId
               ? { ...normalizedMessage, status: "delivered" }
@@ -199,19 +245,27 @@ export default function ChatApp() {
           );
         }
 
-        // Check for duplicates
-        const isDuplicate = prev.some(
-          (msg) =>
-            msg._id === normalizedMessage._id ||
-            (msg.text === normalizedMessage.text &&
-              msg.senderId === normalizedMessage.senderId &&
-              Math.abs(
-                new Date(`1970-01-01 ${msg.time}`) -
-                  new Date(`1970-01-01 ${normalizedMessage.time}`)
-              ) < 60000)
-        );
+        // Enhanced duplicate check
+        const isDuplicate = prev.some((msg) => {
+          // Check by ID first
+          if (msg._id === normalizedMessage._id) return true;
+          
+          // Check by content and sender (for messages without proper IDs)
+          if (msg.text === normalizedMessage.text && 
+              msg.senderId === normalizedMessage.senderId) {
+            // Only consider it duplicate if timestamps are close (within 5 seconds)
+            const timeDiff = Math.abs(
+              new Date(`1970-01-01 ${msg.time}`) - 
+              new Date(`1970-01-01 ${normalizedMessage.time}`)
+            );
+            return timeDiff < 5000; // 5 seconds tolerance
+          }
+          
+          return false;
+        });
 
         if (isDuplicate) {
+          console.log('Duplicate message detected, skipping');
           return prev;
         }
 
@@ -220,7 +274,6 @@ export default function ChatApp() {
     };
 
     const handleMessageStatus = (data) => {
-      // Handle message status updates (delivered, seen, etc.)
       setMessages((prev) =>
         prev.map((msg) =>
           msg._id === data.messageId ? { ...msg, status: data.status } : msg
@@ -248,6 +301,37 @@ export default function ChatApp() {
   const handleBackToUsers = () => {
     setShowChat(false);
   };
+
+  // Emoji picker data
+  const emojiCategories = {
+    "Smileys": ["😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "🤥", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🤧", "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐"],
+    "Hearts": ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝"],
+    "Gestures": ["👍", "👎", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "👏", "🙌", "👐", "🤲", "🤝", "🙏"],
+    "Objects": ["🎉", "🎊", "🎈", "🎁", "🎀", "🔥", "💯", "✨", "🌟", "⭐", "🌈", "☀️", "🌙", "⚡", "💥", "💢", "💨", "💤", "💦", "💧"]
+  };
+
+  // Handle emoji selection
+  const handleEmojiSelect = (emoji) => {
+    setNewMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showEmojiPicker && !event.target.closest('.emoji-picker-container')) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
+  // Loading state for messages
+  const isMessagesLoading = convoLoading && selectedUser;
 
   return (
     <div
@@ -283,97 +367,93 @@ export default function ChatApp() {
               </h2>
               <p className="text-sm text-base-content/60">Online 🟢</p>
             </div>
-
-            {/* Logout button aligned right */}
           </div>
-            <button
-              onClick={() => {
-                logout();
-                sessionStorage.clear();
-                window.location.href = "/";
-                navigate("/");
-              }}
-              className="btn btn-warning  btn-sm ml-auto"
-              title="Logout"
-            >
-              Logout
-            </button>
+          <button
+            onClick={() => {
+              logout();
+              sessionStorage.clear();
+              window.location.href = "/";
+              navigate("/");
+            }}
+            className="btn btn-warning  btn-sm ml-auto"
+            title="Logout"
+          >
+            Logout
+          </button>
         </div>
 
         {/* Search */}
         <div className="p-4">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search conversations..."
-          className="input input-sm w-full bg-base-300 border-base-300 outline-none focus:outline-none"
-        />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search conversations..."
+            className="input input-sm w-full bg-base-300 border-base-300 outline-none focus:outline-none"
+          />
         </div>
 
         {/* Users List */}
         <div className="flex-1 overflow-y-auto pb-4">
-  {isLoading
-    ? Array.from({ length: 5 }).map((_, index) => (
-        <div key={index} className="p-4 border-b border-base-300">
-          <div className="flex items-center gap-3">
-            <div className="skeleton w-12 h-12 rounded-full"></div>
-            <div className="flex-1">
-              <div className="skeleton h-4 w-3/4 mb-2"></div>
-              <div className="skeleton h-3 w-1/2"></div>
-            </div>
-          </div>
-        </div>
-      ))
-    : filteredUsers.length > 0 ? (
-        filteredUsers.map((user, index) => (
-          <div
-            key={index}
-            className={`p-4 border-b border-base-300 cursor-pointer transition-all duration-200 hover:bg-base-300 ${
-              activeUser === index
-                ? "bg-base-300 border-l-4 border-l-primary"
-                : ""
-            }`}
-            onClick={() => handleUserClick(index)}
-          >
-            <div className="flex items-center gap-3">
-              <div className="avatar">
-                <div className="w-12 rounded-full relative">
-                  <img src={user?.profilePhoto} alt={user.fullName} />
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-medium text-base-content truncate">
-                    {user.userName}
-                  </h3>
-                  <span className="text-xs text-base-content/60">
-                    04:26
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mt-1">
-                  <p className="text-sm text-base-content/60 truncate">
-                    {user.lastMessage}
-                  </p>
-                  {user.unread > 0 && (
-                    <div className="badge badge-primary badge-sm">
-                      {user.unread}
+          {isLoading
+            ? Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="p-4 border-b border-base-300">
+                  <div className="flex items-center gap-3">
+                    <div className="skeleton w-12 h-12 rounded-full"></div>
+                    <div className="flex-1">
+                      <div className="skeleton h-4 w-3/4 mb-2"></div>
+                      <div className="skeleton h-3 w-1/2"></div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        ))
-      ) : (
-        // Show "No users found" message when search returns empty
-        <div className="p-4 text-center text-base-content/60">
-          <p>No users found matching "{searchQuery}"</p>
+              ))
+            : filteredUsers.length > 0 ? (
+                filteredUsers.map((user, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 border-b border-base-300 cursor-pointer transition-all duration-200 hover:bg-base-300 ${
+                      activeUser === index
+                        ? "bg-base-300 border-l-4 border-l-primary"
+                        : ""
+                    }`}
+                    onClick={() => handleUserClick(index)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="avatar">
+                        <div className="w-12 rounded-full relative">
+                          <img src={user?.profilePhoto} alt={user.fullName} />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center">
+                          <h3 className="font-medium text-base-content truncate">
+                            {user.userName}
+                          </h3>
+                          <span className="text-xs text-base-content/60">
+                            04:26
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center mt-1">
+                          <p className="text-sm text-base-content/60 truncate">
+                            {user.lastMessage}
+                          </p>
+                          {user.unread > 0 && (
+                            <div className="badge badge-primary badge-sm">
+                              {user.unread}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-base-content/60">
+                  <p>No users found matching "{searchQuery}"</p>
+                </div>
+              )
+          }
         </div>
-      )
-  }
-        </div>
-
       </div>
 
       {/* Right Side - Chat Interface */}
@@ -453,83 +533,123 @@ export default function ChatApp() {
         </div>
 
         {/* Messages Container */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2" style={{ backgroundImage: `url(${bgImage})` }}>
-          {messages.map((message, index) => (
-            <div
-              key={message?._id || `message-${index}`}
-              className={`chat ${
-                message?.sender === "me" ? "chat-end" : "chat-start"
-              }`}
-            >
-              <div className="chat-image avatar">
-                <div className="w-6 rounded-full"></div>
+        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-3" style={{ backgroundImage: `url(${bgImage})` }}>
+          {isMessagesLoading ? (
+            // Show loading skeleton for messages
+            Array.from({ length: 5 }).map((_, index) => (
+              <div key={`skeleton-${index}`} className={`flex ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                <div className="skeleton h-12 w-64 rounded-2xl"></div>
               </div>
-              <div className="chat-header">
-                <span className="text-xs text-base-content/60">
-                  {message?.time || '00:00'}
-                </span>
-              </div>
+            ))
+          ) : messages.length === 0 && selectedUser ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-base-content/60">No messages yet. Start the conversation!</p>
+            </div>
+          ) : (
+            messages.map((message, index) => (
               <div
-                className={`chat-bubble text-sm max-w-xs ${
-                  message?.sender === "me"
-                    ? "chat-bubble-primary"
-                    : "chat-bubble-secondary"
-                } ${message?.isOptimistic ? "opacity-70" : ""}`}
+                key={message._id || `message-${index}`}
+                className={`flex ${message.sender === "me" ? "justify-end" : "justify-start"} px-2`}
               >
-                {message?.text}
-              </div>
-              {message.sender === "me" && !message.isOptimistic && (
-                <div className="chat-footer opacity-50 flex items-center gap-1">
-                  {message.status === "delivered" ? (
-                    <svg
-                      className="w-3 h-3 text-base-content/60"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  ) : (
-                    <div className="flex">
-                      <svg
-                        className="w-3 h-3 text-primary"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <svg
-                        className="w-3 h-3 text-primary -ml-1"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
+                <div className={`flex flex-col ${message.sender === "me" ? "items-end" : "items-start"} max-w-[75%]`}>
+                  {/* Time header */}
+                  <div className="mb-1">
+                    <span className="text-xs text-base-content/60 px-2">
+                      {message.time}
+                    </span>
+                  </div>
+                  
+                  {/* Message bubble */}
+                  <div
+                    className={`px-4 py-3 rounded-2xl text-sm leading-relaxed break-words ${
+                      message.sender === "me"
+                        ? "bg-primary text-primary-content rounded-br-md"
+                        : "bg-base-100 text-base-content rounded-bl-md"
+                    } ${message.isOptimistic ? "opacity-70" : ""} shadow-sm`}
+                  >
+                    {message.text}
+                  </div>
+                  
+                  {/* Message status for sent messages */}
+                  {message.sender === "me" && !message.isOptimistic && (
+                    <div className="flex items-center gap-1 mt-1 px-2">
+                      {message.status === "delivered" ? (
+                        <svg
+                          className="w-3 h-3 text-base-content/60"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      ) : (
+                        <div className="flex">
+                          <svg
+                            className="w-3 h-3 text-primary"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          <svg
+                            className="w-3 h-3 text-primary -ml-1"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                      <span className="text-xs text-base-content/60">
+                        {message.status === "delivered" ? "Delivered" : "Seen"}
+                      </span>
                     </div>
                   )}
-                  <span className="text-xs text-base-content/60">
-                    {message.status === "delivered" ? "Delivered" : "Seen"}
-                  </span>
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            ))
+          )}
           <div ref={messagesEndRef} />
         </div>
 
         {/* Message Input */}
-        <div className="flex-shrink-0 p-4 border-t border-base-300 bg-base-200">
+        <div className="flex-shrink-0 p-4 border-t border-base-300 bg-base-200 relative">
+          {/* Emoji Picker */}
+          {showEmojiPicker && (
+            <div className="emoji-picker-container absolute bottom-full right-4 mb-2 bg-base-100 border border-base-300 rounded-lg shadow-lg p-4 w-80 max-h-64 overflow-y-auto z-50">
+              <div className="space-y-3">
+                {Object.entries(emojiCategories).map(([category, emojis]) => (
+                  <div key={category}>
+                    <h3 className="text-sm font-medium text-base-content/70 mb-2">{category}</h3>
+                    <div className="grid grid-cols-8 gap-2">
+                      {emojis.map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleEmojiSelect(emoji)}
+                          className="text-xl hover:bg-base-200 rounded p-1 transition-colors"
+                          type="button"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button type="button" className="btn btn-ghost btn-circle btn-sm">
               <svg
@@ -554,7 +674,11 @@ export default function ChatApp() {
               placeholder="Type a message..."
               className="input input-bordered flex-1 bg-base-300 border-base-300 focus:border-primary"
             />
-            <button type="button" className="btn btn-ghost btn-circle btn-sm">
+            <button 
+              type="button" 
+              className="btn btn-ghost btn-circle btn-sm"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            >
               <svg
                 className="w-5 h-5"
                 fill="none"
