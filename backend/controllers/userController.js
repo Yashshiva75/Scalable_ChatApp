@@ -1,6 +1,9 @@
 import { User } from "../models/userSchema.js";
 import bcrypt from "bcrypt";
 import { generateToken } from "../utils/generateToken.js";
+import { connectRedis } from "../redisServer/redisServer.js";
+
+const redis = connectRedis();
 
 export const register = async (req, res) => {
   try {
@@ -129,11 +132,23 @@ export const logout = async (req, res) => {
 export const getOtherUsers = async (req, res) => {
   try {
     const LoggedInUser = req.user;
+    const cacheKey = `users:${LoggedInUser}`;
 
+    // 1️⃣ Check Redis cache
+    const cachedUsers = await redis.get(cacheKey);
+    if (cachedUsers) {
+      console.log("⚡ Redis Cache Hit");
+      return res.status(200).json({ users: JSON.parse(cachedUsers) });
+    }
+
+    // 2️⃣ Cache miss → DB query
+    console.log("🐢 Redis Cache Miss → Fetching from DB");
     const AllUsers = await User.find({ _id: { $ne: LoggedInUser } }).select(
       "-password"
     );
 
+    // 3️⃣ Save result in Redis (expire in 60s)
+    await redis.setex(cacheKey, 60, JSON.stringify(AllUsers));
     return res.status(200).json({ users: AllUsers });
   } catch (error) {
     return res.status(500).json("Error in getting users");

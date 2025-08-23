@@ -7,6 +7,8 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors'
 import  {connectDb}  from './config/database.js'
 import { initSocket } from './socketServer/socketServer.js'
+import { connectRedis } from './redisServer/redisServer.js'
+
 dotenv.config()
 
 const app = express()
@@ -23,7 +25,8 @@ app.use(express.urlencoded({
 
 app.use(cookieParser());
 
-
+//Redis
+const redis = connectRedis()
 
 app.use(cors({
      origin: [
