@@ -8,7 +8,7 @@ let redis;
 export const connectRedis = () => {
   if (!redis) {
     redis = new Redis(
-      process.env.REDIS_URI
+      process.env.REDIS_URL
     );
 
     redis.on("connect", () => {
